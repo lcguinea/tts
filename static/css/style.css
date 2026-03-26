@@ -1,0 +1,97 @@
+/* Base Styles & Utilities */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+body {
+    font-family: 'Inter', sans-serif;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* Custom Animations */
+@keyframes shine {
+    from {
+        transform: translateX(-100%) skewX(-15deg);
+    }
+    to {
+        transform: translateX(200%) skewX(-15deg);
+    }
+}
+
+.animate-shine {
+    animation: shine 1.5s ease-in-out infinite;
+}
+
+@keyframes fade-in-up {
+    0% {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-fade-in-up {
+    animation: fade-in-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Custom Styling for Drag & Drop Zone */
+#dropzone.drag-active {
+    border-color: #3b82f6; /* Tailwind blue-500 */
+    background-color: #eff6ff; /* Tailwind blue-50 */
+    transform: scale(1.02);
+}
+
+/* Custom Range Input (Sliders) */
+.win10-range {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 6px;
+    background: #e2e8f0;
+    border-radius: 9999px;
+    outline: none;
+    transition: background 0.2s;
+}
+
+.win10-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #3b82f6;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: transform 0.1s, background 0.2s;
+}
+
+.win10-range::-webkit-slider-thumb:hover {
+    transform: scale(1.15);
+    background: #2563eb;
+}
+
+.win10-range::-webkit-slider-thumb:active {
+    transform: scale(0.95);
+}
+
+.win10-range::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border: none;
+    border-radius: 50%;
+    background: #3b82f6;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: transform 0.1s, background 0.2s;
+}
+
+.win10-range::-moz-range-thumb:hover {
+    transform: scale(1.15);
+    background: #2563eb;
+}
+
+/* Player Progress UI Tweaks */
+#progress-container {
+    padding: 10px 0;
+}
