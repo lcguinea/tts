@@ -166,6 +166,13 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        // CRITICAL FOR iOS (WebKit): "Unlock" the audio element on user gesture
+        // chrome/edge on iOS require a direct user interaction to play audio later from an async fetch
+        audio.play().then(() => {
+            audio.pause();
+            audio.currentTime = 0;
+        }).catch(() => { /* Initial unlock may fail if blocked, we try again after fetch */ });
+
         // Set Loading State
         btnSubmit.disabled = true;
         submitText.textContent = "Procesando...";
@@ -175,6 +182,10 @@ document.addEventListener('DOMContentLoaded', () => {
         playerSection.classList.add('hidden'); // Hide old player
         
         const formData = new FormData(form);
+        // Explicitly ensuring csrf_token is in the formData for certain mobile browsers
+        if (!formData.has('csrf_token') && csrfToken) {
+            formData.append('csrf_token', csrfToken);
+        }
 
         try {
             const response = await fetch('/api/generate', {
@@ -203,16 +214,24 @@ document.addEventListener('DOMContentLoaded', () => {
             setStatus("¡Audio generado con éxito!", "success");
             
             // Setup Player
+            // For WebKit (iOS), explicitly calling .load() after setting .src is more reliable
             audio.src = data.audio_url;
-            btnDownload.href = data.download_url;
+            audio.load();
             
+            btnDownload.href = data.download_url;
             currentFileName = data.filename;
             
             // Show Player
             playerSection.classList.remove('hidden');
             
-            // Auto play
-            audio.play().catch(() => { /* Ignore auto-play blocks */ });
+            // Auto play (Now more likely to work because we "unlocked" it above)
+            const playPromise = audio.play();
+            if (playPromise !== undefined) {
+                playPromise.catch(() => {
+                    console.info("Auto-play blocked by iOS WebKit, needs manual play.");
+                    setStatus("Audio listo. Pulsa el botón de Play para escuchar.", "success");
+                });
+            }
 
         } catch (error) {
             setStatus(error.message, "error");
