@@ -15,212 +15,275 @@
 <body class="bg-gradient-to-br from-slate-50 to-slate-200 min-h-screen text-slate-800 font-sans antialiased pb-12">
     
     <main class="container mx-auto px-4 pt-10 max-w-4xl">
-        <header class="text-center mb-10">
+        <header class="text-center mb-6">
             <h1 class="text-4xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600 mb-2">TTS Webapp</h1>
-            <p class="text-lg text-slate-500 font-medium">Convierte cualquier texto en audio natural instantáneamente</p>
+            <p class="text-lg text-slate-500 font-medium">Herramientas de voz inteligentes con IA</p>
         </header>
 
-        <section class="bg-white/70 backdrop-blur-lg rounded-3xl shadow-xl border border-white/50 p-6 md:p-10">
-            <form id="tts-form" enctype="multipart/form-data" class="space-y-8">
-                <!-- Hidden CSRF token for form-data compatibility -->
-                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                
-                <!-- Main Input Area (Textarea) -->
-                <div class="space-y-3">
-                    <label for="text_content" class="block text-xl font-bold flex items-center gap-2 text-slate-700">
-                        <i class="ph ph-text-aa text-blue-500"></i> Texto a convertir
-                        <span class="text-sm font-normal text-slate-400 ml-auto group relative cursor-help">
-                            Prioridad principal <i class="ph ph-info"></i>
-                        </span>
-                    </label>
-                    <div class="relative">
-                        <textarea 
-                            id="text_content" 
-                            name="text_content" 
-                            rows="6" 
-                            class="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-base focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all resize-y shadow-inner"
-                            placeholder="Escribe o pega aquí tu texto sin límite de longitud..."
-                        ></textarea>
-                        
-                        <!-- Counters & Tools -->
-                        <div class="flex justify-between items-center mt-2 px-1">
-                            <div class="flex items-center gap-2">
-                                <span id="char-counter" class="text-sm text-slate-500 font-medium font-mono">0 caracteres</span>
-                                <span id="char-warning" class="text-xs text-amber-500 font-semibold hidden bg-amber-50 px-2 py-1 rounded-md">
-                                    <i class="ph-fill ph-warning-circle"></i> Texto muy largo (puede tardar)
-                                </span>
+        <!-- Tab Navigation -->
+        <div class="flex justify-center mb-8 p-1.5 bg-slate-200/50 backdrop-blur-md rounded-2xl w-fit mx-auto border border-white/50">
+            <button id="tab-tts" class="tab-btn px-6 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center gap-2 bg-white shadow-sm text-blue-600" data-target="content-tts">
+                <i class="ph-fill ph-speaker-high"></i> Texto a Voz
+            </button>
+            <button id="tab-stt" class="tab-btn px-6 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center gap-2 text-slate-500 hover:text-slate-700" data-target="content-stt">
+                <i class="ph ph-microphone"></i> Audio a Texto
+            </button>
+        </div>
+
+        <div id="content-tts" class="tab-content block animate-fade-in-up">
+            <section class="bg-white/70 backdrop-blur-lg rounded-3xl shadow-xl border border-white/50 p-6 md:p-10">
+                <form id="tts-form" enctype="multipart/form-data" class="space-y-8">
+                    <!-- Hidden CSRF token for form-data compatibility -->
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    
+                    <!-- Main Input Area (Textarea) -->
+                    <div class="space-y-3">
+                        <label for="text_content" class="block text-xl font-bold flex items-center gap-2 text-slate-700">
+                            <i class="ph ph-text-aa text-blue-500"></i> Texto a convertir
+                            <span class="text-sm font-normal text-slate-400 ml-auto group relative cursor-help">
+                                Prioridad principal <i class="ph ph-info"></i>
+                            </span>
+                        </label>
+                        <div class="relative">
+                            <textarea 
+                                id="text_content" 
+                                name="text_content" 
+                                rows="6" 
+                                class="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-base focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all resize-y shadow-inner"
+                                placeholder="Escribe o pega aquí tu texto sin límite de longitud..."
+                            ></textarea>
+                            
+                            <!-- Counters & Tools -->
+                            <div class="flex justify-between items-center mt-2 px-1">
+                                <div class="flex items-center gap-2">
+                                    <span id="char-counter" class="text-sm text-slate-500 font-medium font-mono">0 caracteres</span>
+                                    <span id="char-warning" class="text-xs text-amber-500 font-semibold hidden bg-amber-50 px-2 py-1 rounded-md">
+                                        <i class="ph-fill ph-warning-circle"></i> Texto muy largo (puede tardar)
+                                    </span>
+                                </div>
+                                <button type="button" id="btn-clear-text" class="text-sm text-slate-400 hover:text-red-500 font-medium transition-colors flex items-center gap-1">
+                                    <i class="ph ph-trash"></i> Limpiar
+                                </button>
                             </div>
-                            <button type="button" id="btn-clear-text" class="text-sm text-slate-400 hover:text-red-500 font-medium transition-colors flex items-center gap-1">
-                                <i class="ph ph-trash"></i> Limpiar
-                            </button>
                         </div>
                     </div>
-                </div>
 
-                <!-- OR Divider -->
-                <div class="relative flex py-2 items-center">
-                    <div class="flex-grow border-t border-slate-200"></div>
-                    <span class="flex-shrink-0 mx-4 text-slate-400 text-sm font-semibold uppercase tracking-wider">o sube un archivo</span>
-                    <div class="flex-grow border-t border-slate-200"></div>
-                </div>
+                    <!-- OR Divider -->
+                    <div class="relative flex py-2 items-center">
+                        <div class="flex-grow border-t border-slate-200"></div>
+                        <span class="flex-shrink-0 mx-4 text-slate-400 text-sm font-semibold uppercase tracking-wider">o sube un archivo</span>
+                        <div class="flex-grow border-t border-slate-200"></div>
+                    </div>
 
-                <!-- File Upload (Alternative) -->
-                <div>
-                    <div id="dropzone" class="border-2 border-dashed border-slate-300 rounded-2xl p-8 text-center bg-slate-50/50 hover:bg-slate-50 transition-colors cursor-pointer group">
-                        <input type="file" id="file" name="file" class="hidden" accept=".txt,.rtf">
-                        <div class="flex flex-col items-center gap-3">
+                    <!-- File Upload (Alternative) -->
+                    <div>
+                        <div id="dropzone" class="border-2 border-dashed border-slate-300 rounded-2xl p-8 text-center bg-slate-50/50 hover:bg-slate-50 transition-colors cursor-pointer group">
+                            <input type="file" id="file" name="file" class="hidden" accept=".txt,.rtf">
+                            <div class="flex flex-col items-center gap-3">
+                                <div class="w-16 h-16 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                    <i class="ph ph-upload-simple text-3xl"></i>
+                                </div>
+                                <div>
+                                    <p class="text-slate-700 font-semibold mb-1">Arrastra tu archivo aquí o haz clic para subir</p>
+                                    <p class="text-slate-500 text-sm">Soporta .txt y .rtf (Máx 10MB)</p>
+                                </div>
+                                <div id="file-feedback" class="hidden mt-2 inline-flex items-center gap-2 bg-green-50 text-green-700 px-3 py-1.5 rounded-full text-sm font-medium border border-green-200">
+                                    <i class="ph-fill ph-file-text"></i> <span id="file-name">archivo.txt</span>
+                                    <button type="button" id="btn-remove-file" class="ml-2 hover:text-red-600 focus:outline-none"><i class="ph ph-x"></i></button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Settings Grid -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 bg-slate-50 p-6 rounded-2xl border border-slate-100">
+                        <!-- Voice -->
+                        <div class="col-span-1 md:col-span-2 lg:col-span-1">
+                            <label class="block text-sm font-semibold text-slate-700 mb-2">Voz</label>
+                            <select name="voice" class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm">
+                                <option value="es-ES-AlvaroNeural">Alvaro (España)</option>
+                                <option value="es-MX-JorgeNeural">Jorge (México)</option>
+                                <option value="es-AR-TomasNeural">Tomas (Argentina)</option>
+                                <option value="es-CO-GonzaloNeural">Gonzalo (Colombia)</option>
+                                <option value="es-US-AlonsoNeural">Alonso (Latino US)</option>
+                                <option value="es-ES-ElviraNeural">Elvira (España)</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Rate -->
+                        <div>
+                            <div class="flex justify-between items-center mb-2">
+                                <label class="text-sm font-semibold text-slate-700">Velocidad</label>
+                                <span id="rate-val" class="text-xs text-blue-600 font-mono font-bold">0%</span>
+                            </div>
+                            <input type="range" name="rate" id="rate" min="-50" max="50" value="0" class="w-full win10-range accent-blue-600">
+                        </div>
+
+                        <!-- Pitch -->
+                        <div>
+                            <div class="flex justify-between items-center mb-2">
+                                <label class="text-sm font-semibold text-slate-700">Tono (Pitch)</label>
+                                <span id="pitch-val" class="text-xs text-blue-600 font-mono font-bold">0Hz</span>
+                            </div>
+                            <input type="range" name="pitch" id="pitch" min="-20" max="20" value="0" class="w-full win10-range accent-blue-600">
+                        </div>
+                        
+                        <!-- Volume Boost -->
+                        <div>
+                            <div class="flex justify-between items-center mb-2">
+                                <label class="text-sm font-semibold text-slate-700">Volumen Voz</label>
+                                <span id="volume-val" class="text-xs text-blue-600 font-mono font-bold">0%</span>
+                            </div>
+                            <input type="range" name="volume" id="volume" min="-50" max="50" value="0" class="w-full win10-range accent-blue-600">
+                        </div>
+                    </div>
+
+                    <!-- Action Button -->
+                    <button type="submit" id="btn-submit" class="w-full group relative flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold text-lg md:text-xl py-4 px-8 rounded-2xl shadow-lg hover:shadow-xl hover:from-blue-700 hover:to-indigo-700 transition-all overflow-hidden focus:outline-none focus:ring-4 focus:ring-blue-300 active:scale-[0.98]">
+                        <div class="absolute inset-0 w-1/4 h-full bg-white/20 skew-x-12 -translate-x-full group-hover:animate-shine"></div>
+                        <span id="submit-text">Transformar a Audio</span>
+                        <i id="submit-icon" class="ph-fill ph-magic-wand text-2xl"></i>
+                        <i id="submit-spinner" class="ph ph-spinner-gap animate-spin text-2xl hidden"></i>
+                    </button>
+                    
+                    <!-- Status Feedback Message -->
+                    <div id="status-message" class="hidden text-center text-sm font-medium py-3 rounded-xl border border-transparent transition-all"></div>
+                </form>
+            </section>
+
+            <!-- Player UI Section -->
+            <section id="player-section" class="mt-8 hidden animate-fade-in-up">
+                <div class="bg-indigo-950 text-white rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden">
+                    <!-- Background decorative gloss -->
+                    <div class="absolute top-0 right-0 w-64 h-64 bg-blue-500 rounded-full mix-blend-screen filter blur-[80px] opacity-20 pointer-events-none"></div>
+                    <div class="absolute bottom-0 left-0 w-48 h-48 bg-purple-500 rounded-full mix-blend-screen filter blur-[60px] opacity-20 pointer-events-none"></div>
+                    
+                    <h3 class="text-xl font-bold mb-6 flex items-center gap-2 relative z-10 text-indigo-100">
+                        <i class="ph-fill ph-headphones text-blue-400"></i> Tu Audio está listo
+                    </h3>
+                    
+                    <audio id="native-audio" preload="metadata"></audio>
+
+                    <div class="relative z-10 flex flex-col gap-6">
+                        <div class="space-y-2 group cursor-pointer" id="progress-container">
+                            <div class="flex justify-between text-xs font-mono text-indigo-200">
+                                <span id="time-current">00:00</span>
+                                <span id="time-total">00:00</span>
+                            </div>
+                            <div class="w-full bg-indigo-900/50 rounded-full h-3 relative overflow-hidden" id="progress-bar-bg">
+                                <div id="progress-buffer" class="absolute top-0 left-0 h-full bg-indigo-800/40 w-0"></div>
+                                <div id="progress-played" class="absolute top-0 left-0 h-full bg-gradient-to-r from-blue-400 to-indigo-300 w-0 transition-all duration-75 ease-linear"></div>
+                                <div id="progress-thumb" class="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-white rounded-full shadow opacity-0 group-hover:opacity-100 transition-opacity" style="left: 0%;"></div>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center justify-between">
+                            <div class="hidden md:flex items-center gap-2 group">
+                                <button id="btn-mute" class="text-indigo-200 hover:text-white transition-colors focus:outline-none">
+                                    <i class="ph-fill ph-speaker-high text-xl" id="icon-volume"></i>
+                                </button>
+                                <input type="range" id="player-volume" min="0" max="1" step="0.01" value="1" class="w-20 accent-blue-400 opacity-0 group-hover:opacity-100 transition-opacity focus:opacity-100">
+                            </div>
+                            
+                            <div class="flex items-center gap-4 md:gap-6 justify-center flex-1">
+                                <button id="btn-rewind" class="text-indigo-300 hover:text-white hover:bg-indigo-800/50 p-3 rounded-full transition-all active:scale-95 focus:outline-none" title="-10 Segundos">
+                                    <i class="ph-fill ph-rewind-circle text-3xl"></i>
+                                </button>
+                                <button id="btn-play-pause" class="bg-indigo-500 hover:bg-indigo-400 text-white w-16 h-16 rounded-full flex items-center justify-center shadow-lg hover:shadow-indigo-500/50 transition-all active:scale-90 focus:outline-none">
+                                    <i class="ph-fill ph-play text-3xl ml-1" id="icon-play-pause"></i>
+                                </button>
+                                <button id="btn-forward" class="text-indigo-300 hover:text-white hover:bg-indigo-800/50 p-3 rounded-full transition-all active:scale-95 focus:outline-none" title="+10 Segundos">
+                                    <i class="ph-fill ph-fast-forward-circle text-3xl"></i>
+                                </button>
+                            </div>
+                            <div class="w-8 md:w-28 flex justify-end"></div>
+                        </div>
+                    </div>
+
+                    <div class="mt-8 pt-6 border-t border-indigo-800/50 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 relative z-10">
+                        <a id="btn-download" href="#" class="flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-white py-3 px-4 rounded-xl font-medium transition-colors">
+                            <i class="ph-fill ph-download-simple"></i> Descargar MP3
+                        </a>
+                        <button id="btn-share-wa" type="button" class="flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#128C7E] text-white py-3 px-4 rounded-xl font-medium transition-colors">
+                            <i class="ph-fill ph-whatsapp-logo"></i> Compartir
+                        </button>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Audio to Text Section -->
+        <div id="content-stt" class="tab-content hidden animate-fade-in-up">
+            <section class="bg-white/70 backdrop-blur-lg rounded-3xl shadow-xl border border-white/50 p-6 md:p-10">
+                <div class="space-y-8">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Record Card -->
+                        <div class="bg-slate-50 p-6 rounded-2xl border border-slate-100 flex flex-col items-center justify-center gap-4 group transition-all hover:shadow-md">
+                            <div id="recorder-container" class="relative">
+                                <div id="recorder-pulse" class="absolute inset-0 bg-red-500/20 rounded-full scale-150 animate-ping hidden"></div>
+                                <button id="btn-record" class="w-20 h-20 rounded-full bg-red-100 text-red-600 flex items-center justify-center hover:bg-red-200 transition-all shadow-sm focus:outline-none active:scale-95">
+                                    <i class="ph-fill ph-microphone text-4xl"></i>
+                                </button>
+                            </div>
+                            <div class="text-center">
+                                <h4 id="record-status" class="font-bold text-slate-700">Grabar nota de voz</h4>
+                                <p id="record-timer" class="text-sm text-slate-500 font-mono mt-1">00:00</p>
+                            </div>
+                            <div class="flex gap-2">
+                                <button id="btn-stop" class="hidden px-4 py-2 bg-slate-800 text-white rounded-xl text-sm font-bold hover:bg-slate-700 transition-all flex items-center gap-2">
+                                    <i class="ph-fill ph-stop"></i> Detener
+                                </button>
+                                <button id="btn-play-recorded" class="hidden px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 transition-all flex items-center gap-2">
+                                    <i class="ph-fill ph-play"></i> Escuchar
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Upload Card -->
+                        <div id="stt-dropzone" class="border-2 border-dashed border-slate-300 rounded-2xl p-6 text-center bg-slate-50/50 hover:bg-slate-50 transition-colors cursor-pointer group flex flex-col items-center justify-center gap-3">
+                            <input type="file" id="stt-file" class="hidden" accept=".mp3,.wav,.m4a,.webm,.ogg,.opus,.mp4">
                             <div class="w-16 h-16 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center group-hover:scale-110 transition-transform">
                                 <i class="ph ph-upload-simple text-3xl"></i>
                             </div>
                             <div>
-                                <p class="text-slate-700 font-semibold mb-1">Arrastra tu archivo aquí o haz clic para subir</p>
-                                <p class="text-slate-500 text-sm">Soporta .txt y .rtf (Máx 10MB)</p>
+                                <p class="text-slate-700 font-semibold mb-1">Subir archivo de audio o video</p>
+                                <p class="text-xs text-slate-500">MP3, WAV, M4A, WEBM, OGG, OPUS, MP4</p>
                             </div>
-                            <div id="file-feedback" class="hidden mt-2 inline-flex items-center gap-2 bg-green-50 text-green-700 px-3 py-1.5 rounded-full text-sm font-medium border border-green-200">
-                                <i class="ph-fill ph-file-text"></i> <span id="file-name">archivo.txt</span>
-                                <button type="button" id="btn-remove-file" class="ml-2 hover:text-red-600 focus:outline-none"><i class="ph ph-x"></i></button>
+                            <div id="stt-file-feedback" class="hidden mt-1 inline-flex items-center gap-2 bg-green-50 text-green-700 px-3 py-1.5 rounded-full text-xs font-medium border border-green-200 max-w-full overflow-hidden">
+                                <i class="ph-fill ph-file-audio"></i> <span id="stt-file-name" class="truncate max-w-[120px]">audio.mp3</span>
+                                <button type="button" id="btn-remove-stt-file" class="ml-1 hover:text-red-600"><i class="ph ph-x"></i></button>
                             </div>
                         </div>
                     </div>
-                </div>
 
-                <!-- Settings Grid -->
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 bg-slate-50 p-6 rounded-2xl border border-slate-100">
-                    <!-- Voice -->
-                    <div class="col-span-1 md:col-span-2 lg:col-span-1">
-                        <label class="block text-sm font-semibold text-slate-700 mb-2">Voz</label>
-                        <select name="voice" class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm">
-                            <option value="es-ES-AlvaroNeural">Alvaro (España)</option>
-                            <option value="es-MX-JorgeNeural">Jorge (México)</option>
-                            <option value="es-AR-TomasNeural">Tomas (Argentina)</option>
-                            <option value="es-CO-GonzaloNeural">Gonzalo (Colombia)</option>
-                            <option value="es-US-AlonsoNeural">Alonso (Latino US)</option>
-                            <!-- Agregando una voz femenina popular por si acaso -->
-                            <option value="es-ES-ElviraNeural">Elvira (España)</option>
-                        </select>
-                    </div>
-                    
-                    <!-- Rate -->
-                    <div>
-                        <div class="flex justify-between items-center mb-2">
-                            <label class="text-sm font-semibold text-slate-700">Velocidad</label>
-                            <span id="rate-val" class="text-xs text-blue-600 font-mono font-bold">0%</span>
-                        </div>
-                        <input type="range" name="rate" id="rate" min="-50" max="50" value="0" class="w-full win10-range accent-blue-600">
-                    </div>
-
-                    <!-- Pitch -->
-                    <div>
-                        <div class="flex justify-between items-center mb-2">
-                            <label class="text-sm font-semibold text-slate-700">Tono (Pitch)</label>
-                            <span id="pitch-val" class="text-xs text-blue-600 font-mono font-bold">0Hz</span>
-                        </div>
-                        <input type="range" name="pitch" id="pitch" min="-20" max="20" value="0" class="w-full win10-range accent-blue-600">
-                    </div>
-                    
-                    <!-- Volume Boost -->
-                    <div>
-                        <div class="flex justify-between items-center mb-2">
-                            <label class="text-sm font-semibold text-slate-700">Volumen Voz</label>
-                            <span id="volume-val" class="text-xs text-blue-600 font-mono font-bold">0%</span>
-                        </div>
-                        <input type="range" name="volume" id="volume" min="-50" max="50" value="0" class="w-full win10-range accent-blue-600">
-                    </div>
-                </div>
-
-                <!-- Action Button -->
-                <button type="submit" id="btn-submit" class="w-full group relative flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold text-lg md:text-xl py-4 px-8 rounded-2xl shadow-lg hover:shadow-xl hover:from-blue-700 hover:to-indigo-700 transition-all overflow-hidden focus:outline-none focus:ring-4 focus:ring-blue-300 active:scale-[0.98]">
-                    <div class="absolute inset-0 w-1/4 h-full bg-white/20 skew-x-12 -translate-x-full group-hover:animate-shine"></div>
-                    <span id="submit-text">Transformar a Audio</span>
-                    <i id="submit-icon" class="ph-fill ph-magic-wand text-2xl"></i>
-                    
-                    <!-- Loading Spinner (Hidden initially) -->
-                    <i id="submit-spinner" class="ph ph-spinner-gap animate-spin text-2xl hidden"></i>
-                </button>
-                
-                <!-- Status Feedback Message -->
-                <div id="status-message" class="hidden text-center text-sm font-medium py-3 rounded-xl border border-transparent transition-all"></div>
-
-            </form>
-        </section>
-
-        <!-- Player UI Section (Hidden initially) -->
-        <section id="player-section" class="mt-8 hidden animate-fade-in-up">
-            <div class="bg-indigo-950 text-white rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden">
-                <!-- Background decorative gloss -->
-                <div class="absolute top-0 right-0 w-64 h-64 bg-blue-500 rounded-full mix-blend-screen filter blur-[80px] opacity-20 pointer-events-none"></div>
-                <div class="absolute bottom-0 left-0 w-48 h-48 bg-purple-500 rounded-full mix-blend-screen filter blur-[60px] opacity-20 pointer-events-none"></div>
-                
-                <h3 class="text-xl font-bold mb-6 flex items-center gap-2 relative z-10 text-indigo-100">
-                    <i class="ph-fill ph-headphones text-blue-400"></i> Tu Audio está listo
-                </h3>
-                
-                <!-- Native Audio (Hidden, controlled by JS) -->
-                <audio id="native-audio" preload="metadata"></audio>
-
-                <!-- Custom Player Controls -->
-                <div class="relative z-10 flex flex-col gap-6">
-                    
-                    <!-- Progress Bar Area -->
-                    <div class="space-y-2 group cursor-pointer" id="progress-container">
-                        <div class="flex justify-between text-xs font-mono text-indigo-200">
-                            <span id="time-current">00:00</span>
-                            <span id="time-total">00:00</span>
-                        </div>
-                        <div class="w-full bg-indigo-900/50 rounded-full h-3 relative overflow-hidden" id="progress-bar-bg">
-                            <!-- Buffered -->
-                            <div id="progress-buffer" class="absolute top-0 left-0 h-full bg-indigo-800/40 w-0"></div>
-                            <!-- Played -->
-                            <div id="progress-played" class="absolute top-0 left-0 h-full bg-gradient-to-r from-blue-400 to-indigo-300 w-0 transition-all duration-75 ease-linear"></div>
-                            <!-- Thumb handle -->
-                            <div id="progress-thumb" class="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-white rounded-full shadow opacity-0 group-hover:opacity-100 transition-opacity" style="left: 0%;"></div>
-                        </div>
-                    </div>
-
-                    <!-- playback controls -->
-                    <div class="flex items-center justify-between">
-                        
-                        <!-- Volume Control -->
-                        <div class="hidden md:flex items-center gap-2 group">
-                            <button id="btn-mute" class="text-indigo-200 hover:text-white transition-colors focus:outline-none">
-                                <i class="ph-fill ph-speaker-high text-xl" id="icon-volume"></i>
-                            </button>
-                            <input type="range" id="player-volume" min="0" max="1" step="0.01" value="1" class="w-20 accent-blue-400 opacity-0 group-hover:opacity-100 transition-opacity focus:opacity-100">
-                        </div>
-                        
-                        <!-- Main Buttons -->
-                        <div class="flex items-center gap-4 md:gap-6 justify-center flex-1">
-                            <button id="btn-rewind" class="text-indigo-300 hover:text-white hover:bg-indigo-800/50 p-3 rounded-full transition-all active:scale-95 focus:outline-none" title="-10 Segundos">
-                                <i class="ph-fill ph-rewind-circle text-3xl"></i>
-                            </button>
-                            
-                            <button id="btn-play-pause" class="bg-indigo-500 hover:bg-indigo-400 text-white w-16 h-16 rounded-full flex items-center justify-center shadow-lg hover:shadow-indigo-500/50 transition-all active:scale-90 focus:outline-none">
-                                <i class="ph-fill ph-play text-3xl ml-1" id="icon-play-pause"></i>
-                            </button>
-                            
-                            <button id="btn-forward" class="text-indigo-300 hover:text-white hover:bg-indigo-800/50 p-3 rounded-full transition-all active:scale-95 focus:outline-none" title="+10 Segundos">
-                                <i class="ph-fill ph-fast-forward-circle text-3xl"></i>
-                            </button>
-                        </div>
-                        
-                        <!-- Mobile volume spacer to keep centered -->
-                        <div class="w-8 md:w-28 flex justify-end"></div>
-                    </div>
-                </div>
-
-                <!-- Footer Actions -->
-                <div class="mt-8 pt-6 border-t border-indigo-800/50 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 relative z-10">
-                    <a id="btn-download" href="#" class="flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-white py-3 px-4 rounded-xl font-medium transition-colors">
-                        <i class="ph-fill ph-download-simple"></i> Descargar MP3
-                    </a>
-                    <button id="btn-share-wa" type="button" class="flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#128C7E] text-white py-3 px-4 rounded-xl font-medium transition-colors">
-                        <i class="ph-fill ph-whatsapp-logo"></i> Compartir
+                    <button id="btn-transcribe" disabled class="w-full relative flex items-center justify-center gap-2 bg-slate-200 text-slate-400 font-bold text-lg py-4 px-8 rounded-2xl shadow-sm transition-all focus:outline-none overflow-hidden active:scale-[0.98]">
+                        <span id="transcribe-text">Transcribir a Texto</span>
+                        <i id="transcribe-icon" class="ph ph-waveform text-2xl"></i>
+                        <i id="transcribe-spinner" class="ph ph-spinner-gap animate-spin text-2xl hidden"></i>
                     </button>
 
+                    <div id="stt-status" class="hidden text-center text-sm font-medium py-3 rounded-xl border border-transparent"></div>
+
+                    <div id="stt-result-area" class="hidden animate-fade-in-up space-y-4">
+                        <div class="relative">
+                            <label class="block text-sm font-bold text-slate-700 mb-2 flex items-center gap-2">
+                                <i class="ph ph-text-align-left text-blue-500"></i> Texto Transcrito
+                                <span id="stt-char-counter" class="text-xs font-normal text-slate-400 ml-auto font-mono">0 caracteres</span>
+                            </label>
+                            <textarea id="stt-output" rows="8" class="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-base focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all resize-y shadow-inner" placeholder="Aquí aparecerá el texto..."></textarea>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <button id="btn-copy-stt" class="flex items-center justify-center gap-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 py-3 px-4 rounded-xl font-medium transition-all active:scale-95 shadow-sm">
+                                <i class="ph ph-copy"></i> Copiar Texto
+                            </button>
+                            <button id="btn-download-stt" class="flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white py-3 px-4 rounded-xl font-medium transition-all active:scale-95 shadow-md">
+                                <i class="ph ph-download-simple"></i> Descargar .txt
+                            </button>
+                        </div>
+                    </div>
                 </div>
-                
-            </div>
-        </section>
+            </section>
+        </div>
 
     </main>
 

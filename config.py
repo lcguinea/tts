@@ -22,6 +22,9 @@ class Config:
     SESSION_REFRESH_EACH_REQUEST = True
     PERMANENT_SESSION_LIFETIME = 3600 # 1 hour
 
+    # Transcription Settings
+    WHISPER_MODEL = os.environ.get('WHISPER_MODEL', 'tiny') # Tiny by default for Render free tier
+
     # Ensure directories exist
     os.makedirs(UPLOAD_FOLDER, exist_ok=True)
     os.makedirs(GENERATED_FOLDER, exist_ok=True)

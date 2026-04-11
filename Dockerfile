@@ -7,8 +7,9 @@ ENV PYTHONUNBUFFERED 1
 # Configure working directory
 WORKDIR /app
 
-# Install basic underlying tools (if needed)
+# Install basic underlying tools (FFmpeg is required for Whisper)
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
 # Install python dependencies first (caching layer)
@@ -22,4 +23,4 @@ COPY . /app/
 EXPOSE 5000
 
 # Production CMD using Gunicorn
-CMD ["gunicorn", "--workers", "2", "--bind", "0.0.0.0:5000", "app:app"]
+CMD ["gunicorn", "--workers", "1", "--threads", "2", "--timeout", "180", "--bind", "0.0.0.0:5000", "app:app"]

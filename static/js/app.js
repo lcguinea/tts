@@ -395,4 +395,245 @@ document.addEventListener('DOMContentLoaded', () => {
         window.open(`https://wa.me/?text=${text} ${currentUrl}`, '_blank');
     });
 
+    // --- Tab Switching Logic ---
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    const tabContents = document.querySelectorAll('.tab-content');
+
+    tabBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const target = btn.getAttribute('data-target');
+            
+            // Update buttons
+            tabBtns.forEach(b => {
+                b.classList.remove('bg-white', 'shadow-sm', 'text-blue-600');
+                b.classList.add('text-slate-500', 'hover:text-slate-700');
+                const icon = b.querySelector('i');
+                if (icon) icon.classList.replace('ph-fill', 'ph');
+            });
+            
+            btn.classList.add('bg-white', 'shadow-sm', 'text-blue-600');
+            btn.classList.remove('text-slate-500', 'hover:text-slate-700');
+            const activeIcon = btn.querySelector('i');
+            if (activeIcon) activeIcon.classList.replace('ph', 'ph-fill');
+
+            // Update contents
+            tabContents.forEach(content => {
+                content.classList.add('hidden');
+                content.classList.remove('block');
+            });
+            document.getElementById(target).classList.remove('hidden');
+            document.getElementById(target).classList.add('block');
+        });
+    });
+
+    // --- Audio to Text (STT) Logic ---
+    
+    // DOM Elements for STT
+    const sttFile = document.getElementById('stt-file');
+    const sttDropzone = document.getElementById('stt-dropzone');
+    const sttFileFeedback = document.getElementById('stt-file-feedback');
+    const sttFileName = document.getElementById('stt-file-name');
+    const btnRemoveSttFile = document.getElementById('btn-remove-stt-file');
+    
+    const btnRecord = document.getElementById('btn-record');
+    const btnStop = document.getElementById('btn-stop');
+    const btnPlayRecorded = document.getElementById('btn-play-recorded');
+    const recorderPulse = document.getElementById('recorder-pulse');
+    const recordStatus = document.getElementById('record-status');
+    const recordTimerText = document.getElementById('record-timer');
+    
+    const btnTranscribe = document.getElementById('btn-transcribe');
+    const transcribeText = document.getElementById('transcribe-text');
+    const transcribeIcon = document.getElementById('transcribe-icon');
+    const transcribeSpinner = document.getElementById('transcribe-spinner');
+    const sttStatus = document.getElementById('stt-status');
+    
+    const sttResultArea = document.getElementById('stt-result-area');
+    const sttOutput = document.getElementById('stt-output');
+    const sttCharCounter = document.getElementById('stt-char-counter');
+    const btnCopyStt = document.getElementById('btn-copy-stt');
+    const btnDownloadStt = document.getElementById('btn-download-stt');
+
+    let mediaRecorder = null;
+    let audioChunks = [];
+    let recordTimerInterval = null;
+    let recordedBlob = null;
+    let sttSelectedFile = null;
+
+    // Helper for STT status
+    const setSttStatus = (msg, type = 'info') => {
+        sttStatus.textContent = msg;
+        sttStatus.classList.remove('hidden', 'bg-red-50', 'text-red-600', 'bg-blue-50', 'text-blue-600', 'bg-green-50', 'text-green-600');
+        if (type === 'error') sttStatus.classList.add('bg-red-50', 'text-red-600');
+        else if (type === 'success') sttStatus.classList.add('bg-green-50', 'text-green-600');
+        else sttStatus.classList.add('bg-blue-50', 'text-blue-600');
+    };
+
+    // --- Recording Logic ---
+    btnRecord.addEventListener('click', async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(stream);
+            audioChunks = [];
+
+            mediaRecorder.ondataavailable = (event) => audioChunks.push(event.data);
+            mediaRecorder.onstop = () => {
+                recordedBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                btnPlayRecorded.classList.remove('hidden');
+                sttSelectedFile = null; // Prioritize recording
+                updateTranscribeButton();
+            };
+
+            mediaRecorder.start();
+            
+            // UI Update
+            btnRecord.classList.add('animate-pulse', 'bg-red-500', 'text-white');
+            recorderPulse.classList.remove('hidden');
+            btnStop.classList.remove('hidden');
+            btnPlayRecorded.classList.add('hidden');
+            recordStatus.textContent = "Grabando...";
+            
+            // Timer logic
+            let seconds = 0;
+            recordTimerInterval = setInterval(() => {
+                seconds++;
+                const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+                const s = (seconds % 60).toString().padStart(2, '0');
+                recordTimerText.textContent = `${m}:${s}`;
+            }, 1000);
+
+        } catch (err) {
+            console.error("Error accessing microphone:", err);
+            setSttStatus("No se pudo acceder al micrófono. Por favor, revisa los permisos.", "error");
+        }
+    });
+
+    btnStop.addEventListener('click', () => {
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+            mediaRecorder.stop();
+            mediaRecorder.stream.getTracks().forEach(track => track.stop());
+            
+            clearInterval(recordTimerInterval);
+            btnRecord.classList.remove('animate-pulse', 'bg-red-500', 'text-white');
+            recorderPulse.classList.add('hidden');
+            btnStop.classList.add('hidden');
+            recordStatus.textContent = "Grabación lista";
+        }
+    });
+
+    btnPlayRecorded.addEventListener('click', () => {
+        if (recordedBlob) {
+            const url = URL.createObjectURL(recordedBlob);
+            const tempAudio = new Audio(url);
+            tempAudio.play();
+        }
+    });
+
+    // --- Upload Logic ---
+    sttDropzone.addEventListener('click', () => sttFile.click());
+    
+    sttFile.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            sttSelectedFile = file;
+            recordedBlob = null; // Clear recording if file is selected
+            sttFileFeedback.classList.remove('hidden');
+            sttFileName.textContent = file.name;
+            updateTranscribeButton();
+            recordStatus.textContent = "Grabar nota de voz"; // Reset recorder text
+            btnPlayRecorded.classList.add('hidden');
+        }
+    });
+
+    btnRemoveSttFile.addEventListener('click', (e) => {
+        e.stopPropagation();
+        sttSelectedFile = null;
+        sttFile.value = '';
+        sttFileFeedback.classList.add('hidden');
+        updateTranscribeButton();
+    });
+
+    const updateTranscribeButton = () => {
+        if (sttSelectedFile || recordedBlob) {
+            btnTranscribe.disabled = false;
+            btnTranscribe.classList.replace('bg-slate-200', 'bg-gradient-to-r');
+            btnTranscribe.classList.add('from-blue-600', 'to-indigo-600', 'text-white');
+        } else {
+            btnTranscribe.disabled = true;
+            btnTranscribe.classList.replace('bg-gradient-to-r', 'bg-slate-200');
+            btnTranscribe.classList.remove('from-blue-600', 'to-indigo-600', 'text-white');
+            btnTranscribe.classList.add('text-slate-400');
+        }
+    };
+
+    // --- Transcription Workflow ---
+    btnTranscribe.addEventListener('click', async () => {
+        const payload = new FormData();
+        if (recordedBlob) {
+            payload.append('audio', recordedBlob, 'recording.webm');
+        } else if (sttSelectedFile) {
+            payload.append('audio', sttSelectedFile);
+        } else {
+            return;
+        }
+
+        // Set Loading State
+        btnTranscribe.disabled = true;
+        transcribeText.textContent = "Transcribiendo con AI...";
+        transcribeIcon.classList.add('hidden');
+        transcribeSpinner.classList.remove('hidden');
+        setSttStatus("Procesando audio, por favor espera...", "info");
+        sttResultArea.classList.add('hidden');
+
+        try {
+            const response = await fetch('/api/transcribe', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken
+                },
+                body: payload
+            });
+
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || "Error al transcribir.");
+
+            // Success
+            sttOutput.value = data.text;
+            sttCharCounter.textContent = `${data.text.length} caracteres`;
+            sttResultArea.classList.remove('hidden');
+            setSttStatus("Transcripción completada con éxito.", "success");
+
+        } catch (err) {
+            setSttStatus(err.message, "error");
+        } finally {
+            btnTranscribe.disabled = false;
+            transcribeText.textContent = "Transcribir a Texto";
+            transcribeSpinner.classList.add('hidden');
+            transcribeIcon.classList.remove('hidden');
+        }
+    });
+
+    // --- Result Actions ---
+    btnCopyStt.addEventListener('click', () => {
+        sttOutput.select();
+        document.execCommand('copy');
+        const originalText = btnCopyStt.innerHTML;
+        btnCopyStt.innerHTML = '<i class="ph-fill ph-check"></i> ¡Copiado!';
+        setTimeout(() => btnCopyStt.innerHTML = originalText, 2000);
+    });
+
+    btnDownloadStt.addEventListener('click', () => {
+        const blob = new Blob([sttOutput.value], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `transcripcion_${new Date().getTime()}.txt`;
+        a.click();
+        URL.revokeObjectURL(url);
+    });
+
+    sttOutput.addEventListener('input', () => {
+        sttCharCounter.textContent = `${sttOutput.value.length} caracteres`;
+    });
+
 });

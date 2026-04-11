@@ -10,6 +10,7 @@ from flask_limiter.util import get_remote_address
 from config import Config
 from utils import extract_text_from_file, generate_mp3_sync, cleanup_old_files
 import logging
+import whisper
 from werkzeug.exceptions import HTTPException
 
 # Configure logging
@@ -31,9 +32,24 @@ limiter = Limiter(
 
 
 ALLOWED_EXTENSIONS = {'.txt', '.rtf'}
+ALLOWED_AUDIO_EXTENSIONS = {'.mp3', '.wav', '.m4a', '.webm', '.ogg', '.opus', '.mp4'}
 
 def allowed_file(filename):
     return '.' in filename and os.path.splitext(filename)[1].lower() in ALLOWED_EXTENSIONS
+
+def allowed_audio_file(filename):
+    return '.' in filename and os.path.splitext(filename)[1].lower() in ALLOWED_AUDIO_EXTENSIONS
+
+# Lazy Whisper model loader
+_whisper_model_instance = None
+
+def get_whisper_model():
+    global _whisper_model_instance
+    if _whisper_model_instance is None:
+        model_name = app.config.get('WHISPER_MODEL', 'tiny')
+        logger.info(f"Loading Whisper model: {model_name}")
+        _whisper_model_instance = whisper.load_model(model_name)
+    return _whisper_model_instance
 
 @app.before_request
 def assign_session_id():
@@ -153,6 +169,57 @@ def generate_audio():
         'download_url': download_url,
         'filename': output_filename
     })
+
+@app.route('/api/transcribe', methods=['POST'])
+@limiter.limit("5 per minute")
+def transcribe_audio():
+    user_id = session.get('user_id')
+    logger.info(f"--- Transcribe Request Started (User: {user_id}) ---")
+    
+    if 'audio' not in request.files:
+        return jsonify({'error': 'No se proporcionó ningún archivo de audio.'}), 400
+        
+    audio_file = request.files['audio']
+    if audio_file.filename == '':
+        return jsonify({'error': 'Archivo de audio vacío.'}), 400
+
+    if not allowed_audio_file(audio_file.filename):
+        return jsonify({'error': f'Formato no soportado. Usa: {", ".join(ALLOWED_AUDIO_EXTENSIONS)}'}), 400
+
+    # Secure and save the audio file temporarily
+    filename = secure_filename(audio_file.filename)
+    # Ensure unique filename for safety
+    safe_filename = f"transcribe_{user_id}_{uuid.uuid4().hex[:8]}_{filename}"
+    filepath = os.path.join(app.config['UPLOAD_FOLDER'], safe_filename)
+    
+    try:
+        audio_file.save(filepath)
+        logger.info(f"Audio saved to: {filepath}")
+        
+        # Get model and transcribe
+        model = get_whisper_model()
+        logger.info("Starting transcription...")
+        result = model.transcribe(filepath)
+        
+        transcription_text = result.get('text', '').strip()
+        logger.info(f"Transcription complete (Length: {len(transcription_text)})")
+        
+        return jsonify({
+            'success': True,
+            'text': transcription_text
+        })
+        
+    except Exception as e:
+        logger.error(f"Transcription failed: {str(e)}", exc_info=True)
+        return jsonify({'error': 'Error al procesar la transcripción de audio.'}), 500
+    finally:
+        # Cleanup the temporary file immediately
+        if os.path.exists(filepath):
+            try:
+                os.remove(filepath)
+                logger.info(f"Temporary file removed: {filepath}")
+            except Exception as cleanup_err:
+                logger.warning(f"Failed to cleanup temp file {filepath}: {str(cleanup_err)}")
 
 @app.route('/api/audio/<filename>')
 def get_audio(filename):
