@@ -459,32 +459,90 @@ document.addEventListener('DOMContentLoaded', () => {
     let recordTimerInterval = null;
     let recordedBlob = null;
     let sttSelectedFile = null;
+    let recordingMimeType = 'audio/webm'; // Default
+
+    // Helper to find supported MIME type (Crucial for iOS)
+    const getSupportedMimeType = () => {
+        const types = [
+            'audio/webm;codecs=opus',
+            'audio/webm',
+            'audio/mp4',
+            'audio/aac',
+            'audio/ogg;codecs=opus'
+        ];
+        for (const type of types) {
+            if (MediaRecorder.isTypeSupported(type)) {
+                console.log(`MIME Type supported: ${type}`);
+                return type;
+            }
+        }
+        return '';
+    };
 
     // Helper for STT status
     const setSttStatus = (msg, type = 'info') => {
         sttStatus.textContent = msg;
         sttStatus.classList.remove('hidden', 'bg-red-50', 'text-red-600', 'bg-blue-50', 'text-blue-600', 'bg-green-50', 'text-green-600');
         if (type === 'error') sttStatus.classList.add('bg-red-50', 'text-red-600');
-        else if (type === 'success') sttStatus.classList.add('bg-green-50', 'text-green-600');
+        else if (type === 'success') sttStatus.classList.add('bg-green-50', 'text-green-700');
         else sttStatus.classList.add('bg-blue-50', 'text-blue-600');
     };
 
     // --- Recording Logic ---
     btnRecord.addEventListener('click', async () => {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            mediaRecorder = new MediaRecorder(stream);
-            audioChunks = [];
+        // Clear previous recording data
+        recordedBlob = null;
+        audioChunks = [];
+        
+        // Check Browser Support
+        if (!navigator.mediaDevices || !window.MediaRecorder) {
+            setSttStatus("La grabación no está soportada en este navegador. Usa Safari o sube un archivo.", "error");
+            return;
+        }
 
-            mediaRecorder.ondataavailable = (event) => audioChunks.push(event.data);
+        const mimeType = getSupportedMimeType();
+        if (!mimeType) {
+            setSttStatus("No se encontró ningún formato de grabación soportado en este navegador.", "error");
+            return;
+        }
+        recordingMimeType = mimeType;
+
+        try {
+            console.log("Requesting microphone permissions...");
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            console.log("Permissions granted. Initializing MediaRecorder...");
+            
+            mediaRecorder = new MediaRecorder(stream, { mimeType: recordingMimeType });
+            
+            mediaRecorder.ondataavailable = (event) => {
+                if (event.data && event.data.size > 0) {
+                    audioChunks.push(event.data);
+                    console.log(`Data available: ${event.data.size} bytes`);
+                }
+            };
+
             mediaRecorder.onstop = () => {
-                recordedBlob = new Blob(audioChunks, { type: 'audio/webm' });
-                btnPlayRecorded.classList.remove('hidden');
-                sttSelectedFile = null; // Prioritize recording
+                console.log("MediaRecorder stopped.");
+                recordedBlob = new Blob(audioChunks, { type: recordingMimeType });
+                console.log(`Blob created: ${recordedBlob.size} bytes (${recordedBlob.type})`);
+                
+                if (recordedBlob.size === 0) {
+                    setSttStatus("La grabación generó un archivo vacío. Intenta de nuevo o usa otro navegador.", "error");
+                    recordedBlob = null;
+                } else {
+                    btnPlayRecorded.classList.remove('hidden');
+                    sttSelectedFile = null; // Prioritize recording
+                }
                 updateTranscribeButton();
             };
 
-            mediaRecorder.start();
+            mediaRecorder.onerror = (e) => {
+                console.error("MediaRecorder error:", e);
+                setSttStatus("Error durante la grabación. Inténtalo de nuevo.", "error");
+            };
+
+            mediaRecorder.start(100); // Collect data every 100ms
+            console.log("MediaRecorder started.");
             
             // UI Update
             btnRecord.classList.add('animate-pulse', 'bg-red-500', 'text-white');
@@ -495,6 +553,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Timer logic
             let seconds = 0;
+            if (recordTimerInterval) clearInterval(recordTimerInterval);
             recordTimerInterval = setInterval(() => {
                 seconds++;
                 const m = Math.floor(seconds / 60).toString().padStart(2, '0');
@@ -503,8 +562,12 @@ document.addEventListener('DOMContentLoaded', () => {
             }, 1000);
 
         } catch (err) {
-            console.error("Error accessing microphone:", err);
-            setSttStatus("No se pudo acceder al micrófono. Por favor, revisa los permisos.", "error");
+            console.error("Error accessing microphone or initializing recorder:", err);
+            if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                setSttStatus("Permiso de micrófono denegado. Actívalo en los ajustes de tu navegador.", "error");
+            } else {
+                setSttStatus(`Error: ${err.message}`, "error");
+            }
         }
     });
 
@@ -542,6 +605,10 @@ document.addEventListener('DOMContentLoaded', () => {
             updateTranscribeButton();
             recordStatus.textContent = "Grabar nota de voz"; // Reset recorder text
             btnPlayRecorded.classList.add('hidden');
+            if (recordTimerInterval) {
+                clearInterval(recordTimerInterval);
+                recordTimerText.textContent = "00:00";
+            }
         }
     });
 
@@ -558,6 +625,7 @@ document.addEventListener('DOMContentLoaded', () => {
             btnTranscribe.disabled = false;
             btnTranscribe.classList.replace('bg-slate-200', 'bg-gradient-to-r');
             btnTranscribe.classList.add('from-blue-600', 'to-indigo-600', 'text-white');
+            btnTranscribe.classList.remove('text-slate-400');
         } else {
             btnTranscribe.disabled = true;
             btnTranscribe.classList.replace('bg-gradient-to-r', 'bg-slate-200');
@@ -570,7 +638,9 @@ document.addEventListener('DOMContentLoaded', () => {
     btnTranscribe.addEventListener('click', async () => {
         const payload = new FormData();
         if (recordedBlob) {
-            payload.append('audio', recordedBlob, 'recording.webm');
+            const extension = recordingMimeType.includes('mp4') ? 'mp4' : 
+                             recordingMimeType.includes('aac') ? 'aac' : 'webm';
+            payload.append('audio', recordedBlob, `recording.${extension}`);
         } else if (sttSelectedFile) {
             payload.append('audio', sttSelectedFile);
         } else {
@@ -586,6 +656,7 @@ document.addEventListener('DOMContentLoaded', () => {
         sttResultArea.classList.add('hidden');
 
         try {
+            console.log("Starting transcription request...");
             const response = await fetch('/api/transcribe', {
                 method: 'POST',
                 headers: {
@@ -598,12 +669,14 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!response.ok) throw new Error(data.error || "Error al transcribir.");
 
             // Success
+            console.log("Transcription successful.");
             sttOutput.value = data.text;
             sttCharCounter.textContent = `${data.text.length} caracteres`;
             sttResultArea.classList.remove('hidden');
             setSttStatus("Transcripción completada con éxito.", "success");
 
         } catch (err) {
+            console.error("Transcription error:", err);
             setSttStatus(err.message, "error");
         } finally {
             btnTranscribe.disabled = false;
