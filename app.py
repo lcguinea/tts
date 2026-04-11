@@ -10,8 +10,16 @@ from flask_limiter.util import get_remote_address
 from config import Config
 from utils import extract_text_from_file, generate_mp3_sync, cleanup_old_files
 import logging
-import whisper
+from openai import OpenAI
 from werkzeug.exceptions import HTTPException
+
+# Initialize OpenAI Client (Lazy initialization or global)
+client = None
+def get_openai_client():
+    global client
+    if client is None:
+        client = OpenAI(api_key=Config.OPENAI_API_KEY)
+    return client
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -40,16 +48,7 @@ def allowed_file(filename):
 def allowed_audio_file(filename):
     return '.' in filename and os.path.splitext(filename)[1].lower() in ALLOWED_AUDIO_EXTENSIONS
 
-# Lazy Whisper model loader
-_whisper_model_instance = None
-
-def get_whisper_model():
-    global _whisper_model_instance
-    if _whisper_model_instance is None:
-        model_name = app.config.get('WHISPER_MODEL', 'tiny')
-        logger.info(f"Loading Whisper model: {model_name}")
-        _whisper_model_instance = whisper.load_model(model_name)
-    return _whisper_model_instance
+# Local model loader removed in favor of OpenAI API
 
 @app.before_request
 def assign_session_id():
@@ -176,6 +175,10 @@ def transcribe_audio():
     user_id = session.get('user_id')
     logger.info(f"--- Transcribe Request Started (User: {user_id}) ---")
     
+    if not app.config.get('OPENAI_API_KEY'):
+        logger.error("OPENAI_API_KEY is not configured.")
+        return jsonify({'error': 'La transcripción no está configurada (API Key faltante).'}), 500
+
     if 'audio' not in request.files:
         return jsonify({'error': 'No se proporcionó ningún archivo de audio.'}), 400
         
@@ -186,32 +189,46 @@ def transcribe_audio():
     if not allowed_audio_file(audio_file.filename):
         return jsonify({'error': f'Formato no soportado. Usa: {", ".join(ALLOWED_AUDIO_EXTENSIONS)}'}), 400
 
-    # Secure and save the audio file temporarily
+    # Save file temporarily for API transmission
     filename = secure_filename(audio_file.filename)
-    # Ensure unique filename for safety
     safe_filename = f"transcribe_{user_id}_{uuid.uuid4().hex[:8]}_{filename}"
     filepath = os.path.join(app.config['UPLOAD_FOLDER'], safe_filename)
     
     try:
         audio_file.save(filepath)
-        logger.info(f"Audio saved to: {filepath}")
+        logger.info(f"Audio saved to {filepath}. Sending to OpenAI...")
         
-        # Get model and transcribe
-        model = get_whisper_model()
-        logger.info("Starting transcription...")
-        result = model.transcribe(filepath)
+        # Get OpenAI Client
+        openai_client = get_openai_client()
         
-        transcription_text = result.get('text', '').strip()
+        # Perform API Transcription
+        with open(filepath, "rb") as audio_binary:
+            transcription = openai_client.audio.transcriptions.create(
+                model=app.config.get('OPENAI_TRANSCRIBE_MODEL'),
+                file=audio_binary
+            )
+        
+        transcription_text = transcription.text.strip()
         logger.info(f"Transcription complete (Length: {len(transcription_text)})")
         
         return jsonify({
             'success': True,
             'text': transcription_text
         })
-        
+
     except Exception as e:
-        logger.error(f"Transcription failed: {str(e)}", exc_info=True)
-        return jsonify({'error': 'Error al procesar la transcripción de audio.'}), 500
+        err_msg = str(e).lower()
+        logger.error(f"OpenAI API error: {str(e)}", exc_info=True)
+        
+        # Categorize common API errors
+        if "invalid_api_key" in err_msg or "401" in err_msg:
+            return jsonify({'error': 'Error de autenticación: la clave de OpenAI es inválida o expiró.'}), 401
+        if "quota" in err_msg or "429" in err_msg:
+            return jsonify({'error': 'Límite de cuota excedido. Por favor, revisa tus créditos de OpenAI.'}), 429
+        if "timeout" in err_msg:
+            return jsonify({'error': 'Tiempo de espera agotado al conectar con OpenAI.'}), 504
+            
+        return jsonify({'error': f'Error en el servicio de OpenAI: {str(e)}'}), 500
     finally:
         # Cleanup the temporary file immediately
         if os.path.exists(filepath):
