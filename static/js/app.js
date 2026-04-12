@@ -437,10 +437,28 @@ document.addEventListener('DOMContentLoaded', () => {
     
     const btnRecord = document.getElementById('btn-record');
     const btnStop = document.getElementById('btn-stop');
-    const btnPlayRecorded = document.getElementById('btn-play-recorded');
     const recorderPulse = document.getElementById('recorder-pulse');
     const recordStatus = document.getElementById('record-status');
     const recordTimerText = document.getElementById('record-timer');
+    const sttRecordSizeDisplay = document.getElementById('stt-record-size');
+    const btnPause = document.getElementById('btn-pause');
+    const btnResume = document.getElementById('btn-resume');
+    const btnDiscard = document.getElementById('btn-discard');
+    
+    // STT Player Elements
+    const sttPlayerSection = document.getElementById('stt-player-section');
+    const sttAudio = document.getElementById('stt-audio');
+    const sttBtnPlayPause = document.getElementById('stt-btn-play-pause');
+    const sttIconPlayPause = document.getElementById('stt-icon-play-pause');
+    const sttBtnRewind = document.getElementById('stt-btn-rewind');
+    const sttBtnForward = document.getElementById('stt-btn-forward');
+    const sttProgressContainer = document.getElementById('stt-progress-container');
+    const sttProgressPlayed = document.getElementById('stt-progress-played');
+    const sttProgressThumb = document.getElementById('stt-progress-thumb');
+    const sttTimeCurrent = document.getElementById('stt-time-current');
+    const sttTimeTotal = document.getElementById('stt-time-total');
+    const btnDownloadRecorded = document.getElementById('btn-download-recorded');
+    const sttSizeWarning = document.getElementById('stt-size-warning');
     
     const btnTranscribe = document.getElementById('btn-transcribe');
     const transcribeText = document.getElementById('transcribe-text');
@@ -457,157 +475,221 @@ document.addEventListener('DOMContentLoaded', () => {
     let mediaRecorder = null;
     let audioChunks = [];
     let recordTimerInterval = null;
+    let recordingStartTime = 0;
+    let pausedStartTime = 0;
+    let totalPausedTime = 0;
     let recordedBlob = null;
     let sttSelectedFile = null;
-    let recordingMimeType = 'audio/webm'; // Default
+    let recordingMimeType = 'audio/webm'; 
+    let isSttDragging = false;
 
-    // Helper to find supported MIME type (Crucial for iOS)
+    // Helper to find supported MIME type
     const getSupportedMimeType = () => {
-        const types = [
-            'audio/webm;codecs=opus',
-            'audio/webm',
-            'audio/mp4',
-            'audio/aac',
-            'audio/ogg;codecs=opus'
-        ];
+        const types = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/aac', 'audio/ogg;codecs=opus'];
         for (const type of types) {
-            if (MediaRecorder.isTypeSupported(type)) {
-                console.log(`MIME Type supported: ${type}`);
-                return type;
-            }
+            if (MediaRecorder.isTypeSupported(type)) return type;
         }
         return '';
     };
 
-    // Helper for STT status
     const setSttStatus = (msg, type = 'info') => {
         sttStatus.textContent = msg;
-        sttStatus.classList.remove('hidden', 'bg-red-50', 'text-red-600', 'bg-blue-50', 'text-blue-600', 'bg-green-50', 'text-green-600');
+        sttStatus.classList.remove('hidden', 'bg-red-50', 'text-red-600', 'bg-blue-50', 'text-blue-600', 'bg-green-50', 'text-green-700');
         if (type === 'error') sttStatus.classList.add('bg-red-50', 'text-red-600');
         else if (type === 'success') sttStatus.classList.add('bg-green-50', 'text-green-700');
         else sttStatus.classList.add('bg-blue-50', 'text-blue-600');
     };
 
+    const setRecorderUIState = (state) => {
+        // Hide all secondary buttons by default
+        btnStop.classList.add('hidden');
+        btnPause.classList.add('hidden');
+        btnResume.classList.add('hidden');
+        btnDiscard.classList.add('hidden');
+        
+        // Reset styles
+        btnRecord.classList.remove('animate-pulse', 'bg-red-500', 'text-white', 'opacity-50');
+        btnRecord.disabled = false;
+        recorderPulse.classList.add('hidden');
+
+        switch(state) {
+            case 'idle':
+                recordStatus.textContent = "Grabar nota de voz";
+                recordTimerText.textContent = "00:00";
+                break;
+            case 'recording':
+                btnRecord.classList.add('animate-pulse', 'bg-red-50', 'text-red-500'); // Light red pulse
+                recorderPulse.classList.remove('hidden');
+                btnStop.classList.remove('hidden');
+                btnPause.classList.remove('hidden');
+                btnDiscard.classList.remove('hidden');
+                recordStatus.textContent = "Grabando...";
+                break;
+            case 'paused':
+                btnRecord.classList.add('opacity-50');
+                btnRecord.disabled = true;
+                btnStop.classList.remove('hidden');
+                btnResume.classList.remove('hidden');
+                btnDiscard.classList.remove('hidden');
+                recordStatus.textContent = "Grabación en pausa";
+                break;
+            case 'ready':
+                recordStatus.textContent = "Grabación lista";
+                break;
+        }
+    };
+
+    const startTimer = () => {
+        if (recordTimerInterval) clearInterval(recordTimerInterval);
+        recordingStartTime = Date.now();
+        totalPausedTime = 0;
+        
+        recordTimerInterval = setInterval(() => {
+            let now = Date.now();
+            let elapsed;
+            
+            if (mediaRecorder && mediaRecorder.state === 'paused') {
+                elapsed = (pausedStartTime - recordingStartTime - totalPausedTime) / 1000;
+            } else {
+                elapsed = (now - recordingStartTime - totalPausedTime) / 1000;
+            }
+            
+            recordTimerText.textContent = formatTime(Math.max(0, elapsed));
+        }, 200);
+    };
+
     // --- Recording Logic ---
     btnRecord.addEventListener('click', async () => {
-        // Clear previous recording data
         recordedBlob = null;
         audioChunks = [];
+        sttPlayerSection.classList.add('hidden');
+        sttSizeWarning.classList.add('hidden');
+        sttRecordSizeDisplay.classList.add('hidden');
         
-        // Check Browser Support
         if (!navigator.mediaDevices || !window.MediaRecorder) {
-            setSttStatus("La grabación no está soportada en este navegador. Usa Safari o sube un archivo.", "error");
+            setSttStatus("Grabación no soportada. Usa Safari o sube un archivo.", "error");
             return;
         }
 
         const mimeType = getSupportedMimeType();
         if (!mimeType) {
-            setSttStatus("No se encontró ningún formato de grabación soportado en este navegador.", "error");
+            setSttStatus("Formato de grabación no soportado.", "error");
             return;
         }
         recordingMimeType = mimeType;
 
         try {
-            console.log("Requesting microphone permissions...");
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            console.log("Permissions granted. Initializing MediaRecorder...");
-            
             mediaRecorder = new MediaRecorder(stream, { mimeType: recordingMimeType });
             
             mediaRecorder.ondataavailable = (event) => {
-                if (event.data && event.data.size > 0) {
-                    audioChunks.push(event.data);
-                    console.log(`Data available: ${event.data.size} bytes`);
-                }
+                if (event.data && event.data.size > 0) audioChunks.push(event.data);
             };
 
             mediaRecorder.onstop = () => {
-                console.log("MediaRecorder stopped.");
                 recordedBlob = new Blob(audioChunks, { type: recordingMimeType });
-                console.log(`Blob created: ${recordedBlob.size} bytes (${recordedBlob.type})`);
+                const sizeMB = (recordedBlob.size / (1024 * 1024)).toFixed(2);
                 
+                sttRecordSizeDisplay.textContent = `${sizeMB} MB`;
+                sttRecordSizeDisplay.classList.remove('hidden');
+
                 if (recordedBlob.size === 0) {
-                    setSttStatus("La grabación generó un archivo vacío. Intenta de nuevo o usa otro navegador.", "error");
+                    setSttStatus("Grabación vacía. Intenta de nuevo.", "error");
                     recordedBlob = null;
                 } else {
-                    btnPlayRecorded.classList.remove('hidden');
-                    sttSelectedFile = null; // Prioritize recording
+                    // Load into player
+                    const url = URL.createObjectURL(recordedBlob);
+                    sttAudio.src = url;
+                    sttAudio.load();
+                    sttPlayerSection.classList.remove('hidden');
+                    
+                    // 30MB Guard
+                    if (recordedBlob.size > 30 * 1024 * 1024) {
+                        sttSizeWarning.classList.remove('hidden');
+                        btnTranscribe.disabled = true;
+                    } else {
+                        sttSelectedFile = null;
+                        updateTranscribeButton();
+                    }
                 }
-                updateTranscribeButton();
             };
 
-            mediaRecorder.onerror = (e) => {
-                console.error("MediaRecorder error:", e);
-                setSttStatus("Error durante la grabación. Inténtalo de nuevo.", "error");
-            };
-
-            mediaRecorder.start(100); // Collect data every 100ms
-            console.log("MediaRecorder started.");
-            
-            // UI Update
-            btnRecord.classList.add('animate-pulse', 'bg-red-500', 'text-white');
-            recorderPulse.classList.remove('hidden');
-            btnStop.classList.remove('hidden');
-            btnPlayRecorded.classList.add('hidden');
-            recordStatus.textContent = "Grabando...";
-            
-            // Timer logic
-            let seconds = 0;
-            if (recordTimerInterval) clearInterval(recordTimerInterval);
-            recordTimerInterval = setInterval(() => {
-                seconds++;
-                const m = Math.floor(seconds / 60).toString().padStart(2, '0');
-                const s = (seconds % 60).toString().padStart(2, '0');
-                recordTimerText.textContent = `${m}:${s}`;
-            }, 1000);
+            mediaRecorder.start(100);
+            setRecorderUIState('recording');
+            startTimer();
 
         } catch (err) {
-            console.error("Error accessing microphone or initializing recorder:", err);
-            if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-                setSttStatus("Permiso de micrófono denegado. Actívalo en los ajustes de tu navegador.", "error");
-            } else {
-                setSttStatus(`Error: ${err.message}`, "error");
-            }
+            setSttStatus("Error de micrófono o permisos.", "error");
+            console.error(err);
         }
     });
+
+    btnPause.addEventListener('click', () => {
+        if (mediaRecorder && mediaRecorder.state === 'recording') {
+            mediaRecorder.pause();
+            pausedStartTime = Date.now();
+            setRecorderUIState('paused');
+        }
+    });
+
+    btnResume.addEventListener('click', () => {
+        if (mediaRecorder && mediaRecorder.state === 'paused') {
+            totalPausedTime += (Date.now() - pausedStartTime);
+            mediaRecorder.resume();
+            setRecorderUIState('recording');
+        }
+    });
+
+    const discardRecording = () => {
+        if (mediaRecorder) {
+            if (mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+            if (mediaRecorder.stream) {
+                mediaRecorder.stream.getTracks().forEach(track => track.stop());
+            }
+        }
+        clearInterval(recordTimerInterval);
+        audioChunks = [];
+        recordedBlob = null;
+        sttAudio.src = '';
+        sttPlayerSection.classList.add('hidden');
+        sttRecordSizeDisplay.classList.add('hidden');
+        sttSizeWarning.classList.add('hidden');
+        setRecorderUIState('idle');
+        updateTranscribeButton();
+    };
+
+    btnDiscard.addEventListener('click', discardRecording);
 
     btnStop.addEventListener('click', () => {
         if (mediaRecorder && mediaRecorder.state !== 'inactive') {
             mediaRecorder.stop();
             mediaRecorder.stream.getTracks().forEach(track => track.stop());
-            
             clearInterval(recordTimerInterval);
-            btnRecord.classList.remove('animate-pulse', 'bg-red-500', 'text-white');
-            recorderPulse.classList.add('hidden');
-            btnStop.classList.add('hidden');
-            recordStatus.textContent = "Grabación lista";
+            setRecorderUIState('ready');
         }
     });
 
-    btnPlayRecorded.addEventListener('click', () => {
-        if (recordedBlob) {
-            const url = URL.createObjectURL(recordedBlob);
-            const tempAudio = new Audio(url);
-            tempAudio.play();
-        }
-    });
-
-    // --- Upload Logic ---
+    // Subida de archivo (Upload) logic
     sttDropzone.addEventListener('click', () => sttFile.click());
     
     sttFile.addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (file) {
             sttSelectedFile = file;
-            recordedBlob = null; // Clear recording if file is selected
+            recordedBlob = null;
+            sttPlayerSection.classList.add('hidden');
+            sttRecordSizeDisplay.classList.add('hidden');
+            sttSizeWarning.classList.add('hidden');
+            
             sttFileFeedback.classList.remove('hidden');
             sttFileName.textContent = file.name;
-            updateTranscribeButton();
-            recordStatus.textContent = "Grabar nota de voz"; // Reset recorder text
-            btnPlayRecorded.classList.add('hidden');
-            if (recordTimerInterval) {
-                clearInterval(recordTimerInterval);
-                recordTimerText.textContent = "00:00";
+            
+            // File size validation (30MB)
+            if (file.size > 30 * 1024 * 1024) {
+                sttSizeWarning.classList.remove('hidden');
+                btnTranscribe.disabled = true;
+            } else {
+                updateTranscribeButton();
             }
         }
     });
@@ -621,7 +703,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     const updateTranscribeButton = () => {
-        if (sttSelectedFile || recordedBlob) {
+        if ((sttSelectedFile && sttSelectedFile.size <= 30 * 1024 * 1024) || 
+            (recordedBlob && recordedBlob.size <= 30 * 1024 * 1024)) {
             btnTranscribe.disabled = false;
             btnTranscribe.classList.replace('bg-slate-200', 'bg-gradient-to-r');
             btnTranscribe.classList.add('from-blue-600', 'to-indigo-600', 'text-white');
@@ -634,20 +717,83 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // --- Transcription Workflow ---
+    // --- STT Player Control Logic ---
+    sttBtnPlayPause.addEventListener('click', () => {
+        if (sttAudio.paused) sttAudio.play();
+        else sttAudio.pause();
+    });
+
+    sttAudio.addEventListener('play', () => sttIconPlayPause.classList.replace('ph-play', 'ph-pause'));
+    sttAudio.addEventListener('pause', () => sttIconPlayPause.classList.replace('ph-pause', 'ph-play'));
+    sttAudio.addEventListener('ended', () => {
+        sttIconPlayPause.classList.replace('ph-pause', 'ph-play');
+        sttAudio.currentTime = 0;
+    });
+
+    sttAudio.addEventListener('loadedmetadata', () => sttTimeTotal.textContent = formatTime(sttAudio.duration));
+    sttAudio.addEventListener('timeupdate', () => {
+        if (!sttAudio.duration || isSttDragging) return;
+        sttTimeCurrent.textContent = formatTime(sttAudio.currentTime);
+        const progress = (sttAudio.currentTime / sttAudio.duration) * 100;
+        sttProgressPlayed.style.width = `${progress}%`;
+        sttProgressThumb.style.left = `${progress}%`;
+    });
+
+    sttBtnRewind.addEventListener('click', () => sttAudio.currentTime = Math.max(0, sttAudio.currentTime - 10));
+    sttBtnForward.addEventListener('click', () => sttAudio.currentTime = Math.min(sttAudio.duration, sttAudio.currentTime + 10));
+
+    // STT Timeline seek
+    const updateSttSeek = (e) => {
+        const rect = sttProgressContainer.getBoundingClientRect();
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const pos = Math.max(0, Math.min(clientX - rect.left, rect.width));
+        const percentage = pos / rect.width;
+        sttProgressPlayed.style.width = `${percentage * 100}%`;
+        sttProgressThumb.style.left = `${percentage * 100}%`;
+        return percentage;
+    };
+
+    sttProgressContainer.addEventListener('mousedown', (e) => { isSttDragging = true; updateSttSeek(e); });
+    document.addEventListener('mousemove', (e) => { if (isSttDragging) updateSttSeek(e); });
+    document.addEventListener('mouseup', (e) => { 
+        if (isSttDragging) {
+            isSttDragging = false;
+            sttAudio.currentTime = updateSttSeek(e) * sttAudio.duration;
+        }
+    });
+
+    // --- Local Download ---
+    btnDownloadRecorded.addEventListener('click', () => {
+        if (!recordedBlob) return;
+        const ext = recordingMimeType.includes('mp4') ? 'mp4' : recordingMimeType.includes('aac') ? 'aac' : 'webm';
+        const url = URL.createObjectURL(recordedBlob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `grabacion_${new Date().getTime()}.${ext}`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    });
+
+    // Trigger transcribir
     btnTranscribe.addEventListener('click', async () => {
-        const payload = new FormData();
-        if (recordedBlob) {
-            const extension = recordingMimeType.includes('mp4') ? 'mp4' : 
-                             recordingMimeType.includes('aac') ? 'aac' : 'webm';
-            payload.append('audio', recordedBlob, `recording.${extension}`);
-        } else if (sttSelectedFile) {
-            payload.append('audio', sttSelectedFile);
-        } else {
+        const formData = new FormData();
+        const fileToUpload = recordedBlob || sttSelectedFile;
+        if (!fileToUpload) return;
+        
+        // Final guard
+        if (fileToUpload.size > 30 * 1024 * 1024) {
+            setSttStatus("Archivo demasiado grande (> 30MB).", "error");
             return;
         }
 
-        // Set Loading State
+        if (recordedBlob) {
+            const ext = recordingMimeType.includes('mp4') ? 'mp4' : recordingMimeType.includes('aac') ? 'aac' : 'webm';
+            formData.append('audio', recordedBlob, `recording.${ext}`);
+        } else {
+            formData.append('audio', sttSelectedFile);
+        }
+
         btnTranscribe.disabled = true;
         transcribeText.textContent = "Transcribiendo con AI...";
         transcribeIcon.classList.add('hidden');
@@ -656,27 +802,22 @@ document.addEventListener('DOMContentLoaded', () => {
         sttResultArea.classList.add('hidden');
 
         try {
-            console.log("Starting transcription request...");
             const response = await fetch('/api/transcribe', {
                 method: 'POST',
-                headers: {
-                    'X-CSRFToken': csrfToken
-                },
-                body: payload
+                headers: { 'X-CSRFToken': csrfToken },
+                body: formData
             });
 
+            if (response.status === 413) throw new Error("Archivo demasiado grande para el servidor (413).");
+            
             const data = await response.json();
             if (!response.ok) throw new Error(data.error || "Error al transcribir.");
 
-            // Success
-            console.log("Transcription successful.");
             sttOutput.value = data.text;
             sttCharCounter.textContent = `${data.text.length} caracteres`;
             sttResultArea.classList.remove('hidden');
             setSttStatus("Transcripción completada con éxito.", "success");
-
         } catch (err) {
-            console.error("Transcription error:", err);
             setSttStatus(err.message, "error");
         } finally {
             btnTranscribe.disabled = false;
