@@ -798,7 +798,13 @@ document.addEventListener('DOMContentLoaded', () => {
         transcribeText.textContent = "Transcribiendo con AI...";
         transcribeIcon.classList.add('hidden');
         transcribeSpinner.classList.remove('hidden');
-        setSttStatus("Procesando audio, por favor espera...", "info");
+        
+        let statusMsg = "Procesando audio, por favor espera...";
+        // If file > 15MB, it's likely over 5 mins
+        if (fileToUpload.size > 15 * 1024 * 1024) {
+            statusMsg = "Audio largo detectado. Se procesará por partes. Por favor, no cierres esta pestaña.";
+        }
+        setSttStatus(statusMsg, "info");
         sttResultArea.classList.add('hidden');
 
         try {

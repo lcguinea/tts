@@ -8,7 +8,7 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
 from config import Config
-from utils import extract_text_from_file, generate_mp3_sync, cleanup_old_files
+from utils import extract_text_from_file, generate_mp3_sync, cleanup_old_files, get_audio_duration, split_audio_ffmpeg, deduplicate_text
 import logging
 from openai import OpenAI
 from werkzeug.exceptions import HTTPException
@@ -196,24 +196,70 @@ def transcribe_audio():
     
     try:
         audio_file.save(filepath)
-        logger.info(f"Audio saved to {filepath}. Sending to OpenAI...")
         
-        # Get OpenAI Client
+        # Check duration for chunking
+        duration = get_audio_duration(filepath)
+        logger.info(f"Audio saved to {filepath}. Duration: {duration:.2f}s")
+        
+        # Determine if we need chunking (5 min = 300s)
+        # Using 305s as threshold to avoid splitting very close ones
+        CHUNK_THRESHOLD = 300 
+        OVERLAP = 5
+        
         openai_client = get_openai_client()
+        final_transcription = ""
         
-        # Perform API Transcription
-        with open(filepath, "rb") as audio_binary:
-            transcription = openai_client.audio.transcriptions.create(
-                model=app.config.get('OPENAI_TRANSCRIBE_MODEL'),
-                file=audio_binary
-            )
-        
-        transcription_text = transcription.text.strip()
-        logger.info(f"Transcription complete (Length: {len(transcription_text)})")
+        if duration > CHUNK_THRESHOLD + OVERLAP:
+            logger.info(f"Long audio detected ({duration:.2f}s). Processing in chunks of {CHUNK_THRESHOLD}s...")
+            
+            # Create a temporary directory for chunks
+            chunk_dir = os.path.join(app.config['UPLOAD_FOLDER'], f"chunks_{uuid.uuid4().hex[:8]}")
+            os.makedirs(chunk_dir, exist_ok=True)
+            
+            try:
+                chunks = split_audio_ffmpeg(filepath, chunk_dir, chunk_duration=CHUNK_THRESHOLD, overlap=OVERLAP)
+                
+                previous_text = ""
+                for idx, chunk_path in enumerate(chunks):
+                    logger.info(f"Processing chunk {idx+1}/{len(chunks)}: {chunk_path}")
+                    with open(chunk_path, "rb") as audio_binary:
+                        chunk_res = openai_client.audio.transcriptions.create(
+                            model=app.config.get('OPENAI_TRANSCRIBE_MODEL'),
+                            file=audio_binary
+                        )
+                    
+                    chunk_text = chunk_res.text.strip()
+                    if not final_transcription:
+                        final_transcription = chunk_text
+                    else:
+                        # Deduplicate using overlap logic
+                        deduped = deduplicate_text(previous_text, chunk_text, max_overlap_words=20)
+                        final_transcription += " " + deduped
+                    
+                    previous_text = chunk_text
+                    
+                logger.info(f"Chunked transcription complete (Total length: {len(final_transcription)})")
+                
+            finally:
+                # Cleanup chunks directory
+                if os.path.exists(chunk_dir):
+                    import shutil
+                    shutil.rmtree(chunk_dir)
+                    logger.info(f"Cleanup: Removed chunk directory {chunk_dir}")
+        else:
+            # Single call processing
+            logger.info("Sending audio directly to OpenAI...")
+            with open(filepath, "rb") as audio_binary:
+                transcription = openai_client.audio.transcriptions.create(
+                    model=app.config.get('OPENAI_TRANSCRIBE_MODEL'),
+                    file=audio_binary
+                )
+            final_transcription = transcription.text.strip()
+            logger.info(f"Transcription complete (Length: {len(final_transcription)})")
         
         return jsonify({
             'success': True,
-            'text': transcription_text
+            'text': final_transcription
         })
 
     except Exception as e:
