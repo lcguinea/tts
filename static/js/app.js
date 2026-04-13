@@ -501,40 +501,50 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const setRecorderUIState = (state) => {
-        // Hide all secondary buttons by default
-        btnStop.classList.add('hidden');
-        btnPause.classList.add('hidden');
-        btnResume.classList.add('hidden');
-        btnDiscard.classList.add('hidden');
+        // High-level visibility reset: avoid state leaks
+        const elementsToReset = [
+            btnStop, btnPause, btnResume, btnDiscard,
+            sttPlayerSection, recorderPulse
+        ];
+        elementsToReset.forEach(el => el.classList.add('hidden'));
         
-        // Reset styles
-        btnRecord.classList.remove('animate-pulse', 'bg-red-500', 'text-white', 'opacity-50');
+        // Reset main button style
+        btnRecord.classList.remove('animate-pulse', 'bg-red-500', 'text-white', 'opacity-50', 'bg-red-50', 'text-red-500');
         btnRecord.disabled = false;
-        recorderPulse.classList.add('hidden');
+        
+        // btnTranscribe visibility is special (depends on blob/file)
+        btnTranscribe.classList.add('hidden');
 
         switch(state) {
             case 'idle':
                 recordStatus.textContent = "Grabar nota de voz";
                 recordTimerText.textContent = "00:00";
+                sttRecordSizeDisplay.classList.add('hidden');
+                sttSizeWarning.classList.add('hidden');
                 break;
+
             case 'recording':
-                btnRecord.classList.add('animate-pulse', 'bg-red-50', 'text-red-500'); // Light red pulse
+                btnRecord.classList.add('animate-pulse', 'bg-red-50', 'text-red-500');
                 recorderPulse.classList.remove('hidden');
                 btnStop.classList.remove('hidden');
                 btnPause.classList.remove('hidden');
                 btnDiscard.classList.remove('hidden');
                 recordStatus.textContent = "Grabando...";
                 break;
+
             case 'paused':
                 btnRecord.classList.add('opacity-50');
-                btnRecord.disabled = true;
                 btnStop.classList.remove('hidden');
                 btnResume.classList.remove('hidden');
                 btnDiscard.classList.remove('hidden');
                 recordStatus.textContent = "Grabación en pausa";
                 break;
+
             case 'ready':
-                recordStatus.textContent = "Grabación lista";
+                recordStatus.textContent = "Grabación lista (Micro para reiniciar)";
+                sttPlayerSection.classList.remove('hidden');
+                btnTranscribe.classList.remove('hidden');
+                updateTranscribeButton(); 
                 break;
         }
     };
@@ -560,11 +570,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Recording Logic ---
     btnRecord.addEventListener('click', async () => {
+        // If we are in ready state, clicking record means "Restart"
+        if (recordedBlob || sttSelectedFile) {
+            // Clean up previous result first
+            discardRecording(); 
+        }
+
         recordedBlob = null;
         audioChunks = [];
-        sttPlayerSection.classList.add('hidden');
-        sttSizeWarning.classList.add('hidden');
-        sttRecordSizeDisplay.classList.add('hidden');
         
         if (!navigator.mediaDevices || !window.MediaRecorder) {
             setSttStatus("Grabación no soportada. Usa Safari o sube un archivo.", "error");
@@ -596,20 +609,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (recordedBlob.size === 0) {
                     setSttStatus("Grabación vacía. Intenta de nuevo.", "error");
                     recordedBlob = null;
+                    setRecorderUIState('idle');
                 } else {
-                    // Load into player
+                    // Load and unlock for iOS
                     const url = URL.createObjectURL(recordedBlob);
                     sttAudio.src = url;
                     sttAudio.load();
-                    sttPlayerSection.classList.remove('hidden');
+                    setRecorderUIState('ready');
                     
                     // 30MB Guard
                     if (recordedBlob.size > 30 * 1024 * 1024) {
                         sttSizeWarning.classList.remove('hidden');
                         btnTranscribe.disabled = true;
-                    } else {
-                        sttSelectedFile = null;
-                        updateTranscribeButton();
                     }
                 }
             };
@@ -651,9 +662,6 @@ document.addEventListener('DOMContentLoaded', () => {
         audioChunks = [];
         recordedBlob = null;
         sttAudio.src = '';
-        sttPlayerSection.classList.add('hidden');
-        sttRecordSizeDisplay.classList.add('hidden');
-        sttSizeWarning.classList.add('hidden');
         setRecorderUIState('idle');
         updateTranscribeButton();
     };
@@ -663,9 +671,11 @@ document.addEventListener('DOMContentLoaded', () => {
     btnStop.addEventListener('click', () => {
         if (mediaRecorder && mediaRecorder.state !== 'inactive') {
             mediaRecorder.stop();
-            mediaRecorder.stream.getTracks().forEach(track => track.stop());
+            if (mediaRecorder.stream) {
+                mediaRecorder.stream.getTracks().forEach(track => track.stop());
+            }
             clearInterval(recordTimerInterval);
-            setRecorderUIState('ready');
+            // Transition to 'ready' happens in onstop
         }
     });
 
@@ -855,5 +865,8 @@ document.addEventListener('DOMContentLoaded', () => {
     sttOutput.addEventListener('input', () => {
         sttCharCounter.textContent = `${sttOutput.value.length} caracteres`;
     });
+
+    // --- Initialization ---
+    setRecorderUIState('idle');
 
 });
