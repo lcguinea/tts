@@ -482,6 +482,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let sttSelectedFile = null;
     let recordingMimeType = 'audio/webm'; 
     let isSttDragging = false;
+    let isDiscarding = false; 
 
     // Helper to find supported MIME type
     const getSupportedMimeType = () => {
@@ -596,29 +597,50 @@ document.addEventListener('DOMContentLoaded', () => {
             mediaRecorder = new MediaRecorder(stream, { mimeType: recordingMimeType });
             
             mediaRecorder.ondataavailable = (event) => {
-                if (event.data && event.data.size > 0) audioChunks.push(event.data);
+                if (event.data && event.data.size > 0) {
+                    audioChunks.push(event.data);
+                }
             };
 
             mediaRecorder.onstop = () => {
-                recordedBlob = new Blob(audioChunks, { type: recordingMimeType });
-                const sizeMB = (recordedBlob.size / (1024 * 1024)).toFixed(2);
-                
-                sttRecordSizeDisplay.textContent = `${sizeMB} MB`;
-                sttRecordSizeDisplay.classList.remove('hidden');
+                if (isDiscarding) {
+                    console.log("onstop ignored because discard=true");
+                    isDiscarding = false; // Reset for next time
+                    return;
+                }
 
-                if (recordedBlob.size === 0) {
-                    setSttStatus("Grabación vacía. Intenta de nuevo.", "error");
+                console.log("MediaRecorder stopped. Finalizing blob...");
+                recordedBlob = new Blob(audioChunks, { type: recordingMimeType });
+                
+                const sizeBytes = recordedBlob.size;
+                const sizeMB = (sizeBytes / (1024 * 1024)).toFixed(2);
+                console.log(`Blob finalized: ${sizeMB} MB, Type: ${recordingMimeType}, Chunks: ${audioChunks.length}`);
+
+                // CRITICAL: Stop all tracks now that we have the data
+                if (mediaRecorder.stream) {
+                    mediaRecorder.stream.getTracks().forEach(track => {
+                        console.log(`Stopping track: ${track.kind}`);
+                        track.stop();
+                    });
+                }
+
+                if (sizeBytes === 0) {
+                    console.error("Recording error: Produced 0-byte blob.");
+                    setSttStatus("Error: La grabación quedó vacía. Intenta de nuevo.", "error");
                     recordedBlob = null;
                     setRecorderUIState('idle');
                 } else {
-                    // Load and unlock for iOS
+                    sttRecordSizeDisplay.textContent = `${sizeMB} MB`;
+                    sttRecordSizeDisplay.classList.remove('hidden');
+
+                    // Load into player and transition
                     const url = URL.createObjectURL(recordedBlob);
                     sttAudio.src = url;
                     sttAudio.load();
                     setRecorderUIState('ready');
                     
                     // 30MB Guard
-                    if (recordedBlob.size > 30 * 1024 * 1024) {
+                    if (sizeBytes > 30 * 1024 * 1024) {
                         sttSizeWarning.classList.remove('hidden');
                         btnTranscribe.disabled = true;
                     }
@@ -626,6 +648,8 @@ document.addEventListener('DOMContentLoaded', () => {
             };
 
             mediaRecorder.start(100);
+            isDiscarding = false; // Reset flag on start
+            console.log("MediaRecorder started with mimeType:", recordingMimeType);
             setRecorderUIState('recording');
             startTimer();
 
@@ -637,6 +661,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     btnPause.addEventListener('click', () => {
         if (mediaRecorder && mediaRecorder.state === 'recording') {
+            console.log("Recording paused.");
             mediaRecorder.pause();
             pausedStartTime = Date.now();
             setRecorderUIState('paused');
@@ -645,6 +670,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     btnResume.addEventListener('click', () => {
         if (mediaRecorder && mediaRecorder.state === 'paused') {
+            console.log("Recording resumed.");
             totalPausedTime += (Date.now() - pausedStartTime);
             mediaRecorder.resume();
             setRecorderUIState('recording');
@@ -652,8 +678,13 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     const discardRecording = () => {
+        console.log("Discard requested by user.");
+        isDiscarding = true; // Flag for onstop
+        
         if (mediaRecorder) {
-            if (mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+            if (mediaRecorder.state !== 'inactive') {
+                mediaRecorder.stop();
+            }
             if (mediaRecorder.stream) {
                 mediaRecorder.stream.getTracks().forEach(track => track.stop());
             }
@@ -670,12 +701,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     btnStop.addEventListener('click', () => {
         if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-            mediaRecorder.stop();
-            if (mediaRecorder.stream) {
-                mediaRecorder.stream.getTracks().forEach(track => track.stop());
+            console.log("Stop requested by user.");
+            isDiscarding = false; // Ensure finalization
+            
+            // Request final data bits
+            if (mediaRecorder.requestData) {
+                mediaRecorder.requestData();
             }
+            
+            mediaRecorder.stop();
             clearInterval(recordTimerInterval);
-            // Transition to 'ready' happens in onstop
         }
     });
 
