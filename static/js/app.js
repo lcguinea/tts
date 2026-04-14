@@ -720,20 +720,39 @@ document.addEventListener('DOMContentLoaded', () => {
     sttFile.addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (file) {
+            console.log("File uploaded:", file.name, file.type, file.size);
             sttSelectedFile = file;
             recordedBlob = null;
-            sttPlayerSection.classList.add('hidden');
-            sttRecordSizeDisplay.classList.add('hidden');
-            sttSizeWarning.classList.add('hidden');
+            
+            // Clear any active recording UI
+            setRecorderUIState('idle');
             
             sttFileFeedback.classList.remove('hidden');
             sttFileName.textContent = file.name;
+            
+            // Check if playable in browser
+            const canPlay = sttAudio.canPlayType(file.type);
+            if (canPlay === 'probably' || canPlay === 'maybe') {
+                console.log("File is playable in browser.");
+                const url = URL.createObjectURL(file);
+                sttAudio.src = url;
+                sttAudio.load();
+                sttPlayerSection.classList.remove('hidden');
+            } else {
+                console.log("File format not natively playable in browser, hiding player.");
+                sttAudio.src = '';
+                sttPlayerSection.classList.add('hidden');
+            }
+
+            // Always show transcribe button for valid uploads
+            btnTranscribe.classList.remove('hidden');
             
             // File size validation (30MB)
             if (file.size > 30 * 1024 * 1024) {
                 sttSizeWarning.classList.remove('hidden');
                 btnTranscribe.disabled = true;
             } else {
+                sttSizeWarning.classList.add('hidden');
                 updateTranscribeButton();
             }
         }
@@ -744,6 +763,9 @@ document.addEventListener('DOMContentLoaded', () => {
         sttSelectedFile = null;
         sttFile.value = '';
         sttFileFeedback.classList.add('hidden');
+        sttAudio.src = '';
+        sttPlayerSection.classList.add('hidden');
+        btnTranscribe.classList.add('hidden');
         updateTranscribeButton();
     });
 
