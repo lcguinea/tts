@@ -452,6 +452,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const sttIconPlayPause = document.getElementById('stt-icon-play-pause');
     const sttBtnRewind = document.getElementById('stt-btn-rewind');
     const sttBtnForward = document.getElementById('stt-btn-forward');
+    const sttPlayerFallback = document.getElementById('stt-player-fallback');
     const sttProgressContainer = document.getElementById('stt-progress-container');
     const sttProgressPlayed = document.getElementById('stt-progress-played');
     const sttProgressThumb = document.getElementById('stt-progress-thumb');
@@ -505,7 +506,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // High-level visibility reset: avoid state leaks
         const elementsToReset = [
             btnStop, btnPause, btnResume, btnDiscard,
-            sttPlayerSection, recorderPulse
+            sttPlayerSection, sttPlayerFallback, recorderPulse
         ];
         elementsToReset.forEach(el => el.classList.add('hidden'));
         
@@ -731,17 +732,22 @@ document.addEventListener('DOMContentLoaded', () => {
             sttFileName.textContent = file.name;
             
             // Check if playable in browser
-            const canPlay = sttAudio.canPlayType(file.type);
-            if (canPlay === 'probably' || canPlay === 'maybe') {
+            // A veces canPlayType('audio/ogg; codecs=opus') funciona pero 'audio/opus' no. 
+            // Evaluamos la extensión también
+            const ext = file.name.split('.').pop().toLowerCase();
+            const canPlay = sttAudio.canPlayType(file.type || `audio/${ext}`);
+            if ((canPlay === 'probably' || canPlay === 'maybe') && ext !== 'opus') {
                 console.log("File is playable in browser.");
                 const url = URL.createObjectURL(file);
                 sttAudio.src = url;
                 sttAudio.load();
                 sttPlayerSection.classList.remove('hidden');
+                sttPlayerFallback.classList.add('hidden');
             } else {
-                console.log("File format not natively playable in browser, hiding player.");
+                console.log("File format not natively playable in browser (e.g. .opus), hiding player.");
                 sttAudio.src = '';
                 sttPlayerSection.classList.add('hidden');
+                sttPlayerFallback.classList.remove('hidden');
             }
 
             // Always show transcribe button for valid uploads
@@ -765,6 +771,7 @@ document.addEventListener('DOMContentLoaded', () => {
         sttFileFeedback.classList.add('hidden');
         sttAudio.src = '';
         sttPlayerSection.classList.add('hidden');
+        sttPlayerFallback.classList.add('hidden');
         btnTranscribe.classList.add('hidden');
         updateTranscribeButton();
     });

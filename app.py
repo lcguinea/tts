@@ -12,6 +12,7 @@ from utils import extract_text_from_file, generate_mp3_sync, cleanup_old_files, 
 import logging
 from openai import OpenAI
 from werkzeug.exceptions import HTTPException
+import subprocess
 
 # Initialize OpenAI Client (Lazy initialization or global)
 client = None
@@ -39,7 +40,7 @@ limiter = Limiter(
 
 
 
-ALLOWED_EXTENSIONS = {'.txt', '.rtf'}
+ALLOWED_EXTENSIONS = {'.txt', '.rtf', '.docx', '.pdf', '.md', '.csv', '.html', '.htm'}
 ALLOWED_AUDIO_EXTENSIONS = {'.mp3', '.wav', '.m4a', '.webm', '.ogg', '.opus', '.mp4'}
 
 def allowed_file(filename):
@@ -189,10 +190,15 @@ def transcribe_audio():
     if not allowed_audio_file(audio_file.filename):
         return jsonify({'error': f'Formato no soportado. Usa: {", ".join(ALLOWED_AUDIO_EXTENSIONS)}'}), 400
 
+    ext_detectada = os.path.splitext(audio_file.filename)[1].lower()
+    mime_type_recibido = audio_file.content_type
+    logger.info(f"Archivo recibido: {audio_file.filename}, Extensión detectada: {ext_detectada}, MIME type recibido: {mime_type_recibido}")
+
     # Save file temporarily for API transmission
     filename = secure_filename(audio_file.filename)
     safe_filename = f"transcribe_{user_id}_{uuid.uuid4().hex[:8]}_{filename}"
     filepath = os.path.join(app.config['UPLOAD_FOLDER'], safe_filename)
+    logger.info(f"Ruta temporal asignada: {filepath}")
     
     try:
         audio_file.save(filepath)
@@ -200,6 +206,9 @@ def transcribe_audio():
         # Check duration for chunking
         duration = get_audio_duration(filepath)
         logger.info(f"Audio saved to {filepath}. Duration: {duration:.2f}s")
+        
+        # Si la duración es 0 y no se pudo obtener, podría ser corrupto, pero intentaremos
+        # enviarlo o convertirlo de todos modos. Si falla, el bloque except lo capturará.
         
         # Determine if we need chunking (5 min = 300s)
         # Using 305s as threshold to avoid splitting very close ones
@@ -249,13 +258,39 @@ def transcribe_audio():
         else:
             # Single call processing
             logger.info("Sending audio directly to OpenAI...")
-            with open(filepath, "rb") as audio_binary:
-                transcription = openai_client.audio.transcriptions.create(
-                    model=app.config.get('OPENAI_TRANSCRIBE_MODEL'),
-                    file=audio_binary
-                )
-            final_transcription = transcription.text.strip()
-            logger.info(f"Transcription complete (Length: {len(final_transcription)})")
+            try:
+                with open(filepath, "rb") as audio_binary:
+                    transcription = openai_client.audio.transcriptions.create(
+                        model=app.config.get('OPENAI_TRANSCRIBE_MODEL'),
+                        file=audio_binary
+                    )
+                final_transcription = transcription.text.strip()
+                logger.info("Se transcribió directamente sin conversión previa.")
+            except Exception as direct_e:
+                if ext_detectada == '.opus' or filepath.lower().endswith('.opus'):
+                    logger.warning(f"Fallo directo con .opus. Convirtiendo a .mp3 temporalmente usando ffmpeg. Error: {str(direct_e)}")
+                    mp3_filepath = filepath + ".mp3"
+                    try:
+                        import subprocess
+                        subprocess.run(['ffmpeg', '-y', '-i', filepath, '-q:a', '2', mp3_filepath], capture_output=True, check=True)
+                        logger.info(f"Archivo convertido temporalmente a: {mp3_filepath}")
+                        with open(mp3_filepath, "rb") as audio_binary:
+                            transcription = openai_client.audio.transcriptions.create(
+                                model=app.config.get('OPENAI_TRANSCRIBE_MODEL'),
+                                file=audio_binary
+                            )
+                        final_transcription = transcription.text.strip()
+                        logger.info("Se transcribió correctamente tras convertir.")
+                    except subprocess.CalledProcessError:
+                        logger.error("Fallo al convertir .opus a .mp3. Archivo corrupto o inválido.")
+                        return jsonify({'error': 'El archivo .opus parece estar corrupto o tiene un formato inválido.'}), 400
+                    finally:
+                        if os.path.exists(mp3_filepath):
+                            os.remove(mp3_filepath)
+                            logger.info(f"Cleanup: Temporary converted file removed: {mp3_filepath}")
+                else:
+                    raise direct_e
+            logger.info(f"Transcription complete (Length: {len(final_transcription)}). Resultado de la transcripción exitoso.")
         
         return jsonify({
             'success': True,
@@ -273,6 +308,9 @@ def transcribe_audio():
             return jsonify({'error': 'Límite de cuota excedido. Por favor, revisa tus créditos de OpenAI.'}), 429
         if "timeout" in err_msg:
             return jsonify({'error': 'Tiempo de espera agotado al conectar con OpenAI.'}), 504
+            
+        if "invalid file format" in err_msg or "supported formats" in err_msg:
+            return jsonify({'error': 'Formato de audio inválido o archivo corrupto.'}), 400
             
         return jsonify({'error': f'Error en el servicio de OpenAI: {str(e)}'}), 500
     finally:

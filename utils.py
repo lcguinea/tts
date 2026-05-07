@@ -6,6 +6,11 @@ import subprocess
 import json
 import logging
 from striprtf.striprtf import rtf_to_text
+import docx
+from pypdf import PdfReader
+from bs4 import BeautifulSoup
+import csv
+import io
 
 def cleanup_old_files(directories, max_age_seconds=3600):
     """
@@ -69,41 +74,96 @@ def generate_mp3_sync(text, voice, rate, pitch, volume, output_path):
 
 def extract_text_from_file(filepath):
     """
-    Extracts text from .txt and .rtf files.
-    Returns the extracted text or raises ValueError if unsupported.
+    Extracts text from various file formats (.txt, .rtf, .docx, .pdf, .md, .csv, .html, .htm).
+    Returns the extracted text or raises ValueError if unsupported or empty.
     """
+    logger = logging.getLogger(__name__)
     ext = os.path.splitext(filepath)[1].lower()
     
-    # Try multiple encodings for broader compatibility (RTF can be tricky)
-    encodings = ['utf-8', 'latin-1', 'cp1252']
-    content = None
-    
-    for enc in encodings:
-        try:
-            with open(filepath, 'r', encoding=enc) as f:
-                content = f.read()
-            break
-        except (UnicodeDecodeError, UnicodeError):
-            continue
+    try:
+        if ext in ['.txt', '.md', '.csv', '.html', '.htm']:
+            # Plain text based files
+            encodings = ['utf-8', 'latin-1', 'cp1252']
+            content = None
+            for enc in encodings:
+                try:
+                    with open(filepath, 'r', encoding=enc) as f:
+                        content = f.read()
+                    break
+                except (UnicodeDecodeError, UnicodeError):
+                    continue
             
-    if content is None:
-        # Last resort: read with errors='ignore'
-        with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
-            content = f.read()
-        
-    if ext == '.rtf':
-        try:
+            if content is None:
+                with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
+                    content = f.read()
+            
+            if not content or not content.strip():
+                return f"Error: El archivo {ext.upper()} está vacío."
+
+            if ext == '.csv':
+                # Parse CSV to plain text
+                output = io.StringIO()
+                reader = csv.reader(io.StringIO(content))
+                for row in reader:
+                    output.write(" ".join(row) + "\n")
+                return output.getvalue().strip()
+            
+            if ext in ['.html', '.htm']:
+                # Strip HTML tags
+                soup = BeautifulSoup(content, 'html.parser')
+                for script_or_style in soup(["script", "style"]):
+                    script_or_style.decompose()
+                text = soup.get_text(separator=' ')
+                return " ".join(text.split()).strip()
+            
+            return content.strip()
+
+        elif ext == '.rtf':
+            encodings = ['utf-8', 'latin-1', 'cp1252']
+            content = None
+            for enc in encodings:
+                try:
+                    with open(filepath, 'r', encoding=enc) as f:
+                        content = f.read()
+                    break
+                except (UnicodeDecodeError, UnicodeError):
+                    continue
+            if content is None:
+                with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
+                    content = f.read()
             text = rtf_to_text(content)
             if not text or not text.strip():
-                # If striprtf returns nothing, maybe it's a structural issue
                 return "Error: No se pudo extraer texto del archivo RTF."
+            return text.strip()
+
+        elif ext == '.docx':
+            doc = docx.Document(filepath)
+            full_text = [para.text for para in doc.paragraphs]
+            text = "\n".join(full_text).strip()
+            if not text:
+                return "Error: El archivo DOCX no contiene texto extraíble."
             return text
-        except Exception as e:
-            raise ValueError(f"Error al procesar el formato RTF: {str(e)}")
-    elif ext == '.txt':
-        return content
-    else:
-        raise ValueError("Formato de archivo no soportado. Usa .txt o .rtf.")
+
+        elif ext == '.pdf':
+            reader = PdfReader(filepath)
+            full_text = []
+            for page in reader.pages:
+                page_text = page.extract_text()
+                if page_text:
+                    full_text.append(page_text)
+            text = "\n".join(full_text).strip()
+            if not text:
+                return "Error: El PDF no contiene texto extraíble (podría estar escaneado)."
+            return text
+
+        else:
+            raise ValueError(f"Formato de archivo '{ext}' no soportado.")
+
+    except Exception as e:
+        logger.error(f"Error extracting text from {ext}: {str(e)}")
+        if "is not a Word file" in str(e):
+            return "Error: El archivo no es un documento Word válido."
+        raise ValueError(f"Error al procesar el archivo {ext}: {str(e)}")
 
 def get_audio_duration(filepath):
     """
