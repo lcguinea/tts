@@ -161,9 +161,16 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         
         // Validation
-        if (!textContent.value.trim() && !fileInput.files[0]) {
+        const textLen = textContent.value.length;
+        if (!textLen && !fileInput.files[0]) {
             setStatus("Escribe texto o sube un archivo.", "error");
             return;
+        }
+
+        // Warning for long text
+        if (textLen > 8000) {
+            const proceed = confirm(`Texto largo detectado (${textLen} caracteres). La generación puede tardar más de 1 minuto. ¿Deseas continuar?`);
+            if (!proceed) return;
         }
 
         // CRITICAL FOR iOS (WebKit): "Unlock" the audio element on user gesture
@@ -178,7 +185,10 @@ document.addEventListener('DOMContentLoaded', () => {
         submitText.textContent = "Procesando...";
         submitIcon.classList.add('hidden');
         submitSpinner.classList.remove('hidden');
-        setStatus("Generando audio, por favor espera...", "info");
+        
+        const loadingMsg = textLen > 5000 ? "Generando audio largo, esto puede tardar..." : "Generando audio, por favor espera...";
+        setStatus(loadingMsg, "info");
+        
         playerSection.classList.add('hidden'); // Hide old player
         
         const formData = new FormData(form);
@@ -234,7 +244,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
         } catch (error) {
-            setStatus(error.message, "error");
+            console.error("Generation error:", error);
+            // Handle specific network errors like ERR_CONNECTION_CLOSED or timeouts
+            if (error.name === 'TypeError' || error.message.toLowerCase().includes('fetch')) {
+                setStatus("La generación tardó demasiado o la conexión se interrumpió. Intenta de nuevo o divide el texto.", "error");
+            } else {
+                setStatus(error.message, "error");
+            }
         } finally {
             // Restore Submit Button
             btnSubmit.disabled = false;

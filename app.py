@@ -1,6 +1,7 @@
 import os
 import uuid
 import datetime
+import time
 from flask import Flask, render_template, request, jsonify, send_from_directory, session, url_for
 from werkzeug.utils import secure_filename
 from flask_wtf.csrf import CSRFProtect, generate_csrf, CSRFError
@@ -149,8 +150,14 @@ def generate_audio():
     output_filename = f"{user_id}_{uuid.uuid4().hex[:8]}.mp3"
     output_path = os.path.join(app.config['GENERATED_FOLDER'], output_filename)
     
+    if len(final_text) > 8000:
+        logger.info(f"Long text generation detected: {len(final_text)} characters.")
+
+    start_gen_time = time.time()
     try:
         generate_mp3_sync(final_text, voice, rate, pitch, volume, output_path)
+        total_gen_time = time.time() - start_gen_time
+        logger.info(f"Generation complete. Duration: {total_gen_time:.2f}s for {len(final_text)} chars.")
     except Exception as e:
         err_msg = str(e)
         logger.error(f"edge-tts generation failed: {err_msg}")
