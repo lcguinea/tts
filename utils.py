@@ -285,3 +285,52 @@ def deduplicate_text(text_a, text_b, max_overlap_words=20):
             return " ".join(words_b[size:])
             
     return text_b
+
+import re
+
+def load_tts_dictionary():
+    dict_path = os.path.join(os.path.dirname(__file__), 'tts_dictionary.json')
+    try:
+        with open(dict_path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except Exception as e:
+        logger = logging.getLogger(__name__)
+        logger.warning(f"No se pudo cargar tts_dictionary.json: {e}")
+        return {}
+
+def optimize_text_for_tts(text, use_ai=False, openai_client=None):
+    logger = logging.getLogger(__name__)
+    
+    # 1. Base local cleaning (always applied)
+    # Remove markdown symbols
+    text = re.sub(r'[#*_*«»]', '', text)
+    
+    # Replace from dictionary
+    tts_dict = load_tts_dictionary()
+    for key, value in tts_dict.items():
+        text = re.sub(rf'\b{re.escape(key)}\b', value, text)
+        
+    # 2. AI Optimization if requested
+    if use_ai and openai_client:
+        logger.info("Running AI optimization for TTS...")
+        try:
+            prompt = (
+                "Reescribe el siguiente texto para que sea leído en voz alta por un sistema TTS "
+                "(Text-to-Speech). Convierte las tablas o listas complejas en un formato narrativo lineal, "
+                "elimina cualquier elemento visual, símbolos extraños, y acorta nombres propios repetitivos si "
+                "aparecen muchas veces. Devuelve SOLO el texto optimizado, sin introducciones.\\n\\n"
+                f"Texto original:\\n{text}"
+            )
+            response = openai_client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.3
+            )
+            ai_text = response.choices[0].message.content.strip()
+            if ai_text:
+                text = ai_text
+                logger.info("AI optimization successful.")
+        except Exception as e:
+            logger.error(f"Error during AI text optimization: {e}. Falling back to local cleaning.")
+
+    return text

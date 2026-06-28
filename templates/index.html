@@ -138,6 +138,18 @@
                         </div>
                     </div>
 
+                    <!-- IA Optimization Toggle -->
+                    <div class="flex items-center gap-3 p-4 bg-blue-50/50 rounded-xl border border-blue-100 mb-4">
+                        <div class="relative flex items-center cursor-pointer">
+                            <input type="checkbox" id="use_ai" name="use_ai" value="true" class="peer sr-only">
+                            <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                        </div>
+                        <label for="use_ai" class="text-sm font-semibold text-slate-700 cursor-pointer select-none flex-1">
+                            <i class="ph-fill ph-magic-wand text-blue-500 mr-1"></i> Optimizar texto con IA (OpenAI)
+                            <span class="block text-xs font-normal text-slate-500 mt-0.5">Reescribe listas, tablas y nombres propios complejos para una lectura más fluida. (Más lento)</span>
+                        </label>
+                    </div>
+
                     <!-- Action Button -->
                     <button type="submit" id="btn-submit" class="w-full group relative flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold text-lg md:text-xl py-4 px-8 rounded-2xl shadow-lg hover:shadow-xl hover:from-blue-700 hover:to-indigo-700 transition-all overflow-hidden focus:outline-none focus:ring-4 focus:ring-blue-300 active:scale-[0.98]">
                         <div class="absolute inset-0 w-1/4 h-full bg-white/20 skew-x-12 -translate-x-full group-hover:animate-shine"></div>

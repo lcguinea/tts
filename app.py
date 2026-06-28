@@ -9,7 +9,7 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
 from config import Config
-from utils import extract_text_from_file, generate_mp3_sync, cleanup_old_files, get_audio_duration, split_audio_ffmpeg, deduplicate_text
+from utils import extract_text_from_file, generate_mp3_sync, cleanup_old_files, get_audio_duration, split_audio_ffmpeg, deduplicate_text, optimize_text_for_tts
 import logging
 from openai import OpenAI
 from werkzeug.exceptions import HTTPException
@@ -110,6 +110,11 @@ def generate_audio():
     if not final_text:
         logger.warning("No text provided in request (both textarea and file were empty).")
         return jsonify({'error': 'Por favor, introduce texto o sube un archivo válido.'}), 400
+
+    # Optimization Step
+    use_ai = request.form.get('use_ai') == 'true'
+    openai_client_instance = get_openai_client() if use_ai else None
+    final_text = optimize_text_for_tts(final_text, use_ai=use_ai, openai_client=openai_client_instance)
 
     # Retrieve and Normalize TTS parameters
     voice = request.form.get('voice', '').strip()
