@@ -99,17 +99,37 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 bg-slate-50 p-6 rounded-2xl border border-slate-100">
                         <!-- Voice -->
                         <div class="col-span-1 md:col-span-2 lg:col-span-1">
-                            <label class="block text-sm font-semibold text-slate-700 mb-2">Voz</label>
-                            <select name="voice" class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm">
-                                <option value="es-ES-AlvaroNeural">Alvaro (España)</option>
-                                <option value="es-MX-JorgeNeural">Jorge (México)</option>
-                                <option value="es-AR-TomasNeural">Tomas (Argentina)</option>
-                                <option value="es-CO-GonzaloNeural">Gonzalo (Colombia)</option>
-                                <option value="es-US-AlonsoNeural">Alonso (Latino US)</option>
-                                <option value="es-ES-ElviraNeural">Elvira (España)</option>
+                            <label for="voice" class="block text-sm font-semibold text-slate-700 mb-2">Voz</label>
+                            <select id="voice" name="voice" class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm">
+                                {% for group in voice_groups %}
+                                <optgroup label="{{ group.flag }} {{ group.label }}">
+                                    {% for voice in group.voices %}
+                                    <option value="{{ voice.id }}"{% if voice.id == default_voice %} selected{% endif %}>{{ voice.label }}</option>
+                                    {% endfor %}
+                                </optgroup>
+                                {% endfor %}
                             </select>
+
+                            <!-- Voice preview: fully independent from the main player -->
+                            <button type="button" id="btn-voice-preview"
+                                    class="mt-2 w-full inline-flex items-center justify-center gap-2 bg-white border border-slate-200 hover:bg-slate-50 disabled:opacity-60 disabled:cursor-not-allowed text-slate-700 text-sm font-semibold py-2 px-3 rounded-xl shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    aria-describedby="voice-preview-status">
+                                <i id="voice-preview-icon" class="ph-fill ph-speaker-simple-high" aria-hidden="true"></i>
+                                <i id="voice-preview-spinner" class="ph ph-spinner-gap animate-spin hidden" aria-hidden="true"></i>
+                                <span id="voice-preview-label">Escuchar muestra</span>
+                            </button>
+
+                            <!-- Preview status / error, announced to screen readers -->
+                            <p id="voice-preview-status" role="status" aria-live="polite"
+                               class="hidden mt-2 text-xs font-medium rounded-lg px-2 py-1.5"></p>
+
+                            <!-- Preview audio element, separate from #native-audio.
+                                 `controls` stay available so the sample can be played
+                                 manually when autoplay is blocked by the browser. -->
+                            <audio id="voice-preview-audio" class="hidden mt-2 w-full" preload="none" controls
+                                   aria-label="Muestra de la voz seleccionada"></audio>
                         </div>
-                        
+
                         <!-- Rate -->
                         <div>
                             <div class="flex justify-between items-center mb-2">

@@ -411,6 +411,154 @@ document.addEventListener('DOMContentLoaded', () => {
         window.open(`https://wa.me/?text=${text} ${currentUrl}`, '_blank');
     });
 
+    // --- Voice Preview Logic ---
+    // Strictly isolated: it reads ONLY the voice <select>. It never reads,
+    // sends or modifies the textarea, the uploaded file, the rate/pitch/volume
+    // settings or the main player (#native-audio).
+    const voiceSelect = document.getElementById('voice');
+    const btnVoicePreview = document.getElementById('btn-voice-preview');
+    const voicePreviewIcon = document.getElementById('voice-preview-icon');
+    const voicePreviewSpinner = document.getElementById('voice-preview-spinner');
+    const voicePreviewLabel = document.getElementById('voice-preview-label');
+    const voicePreviewStatus = document.getElementById('voice-preview-status');
+    const voicePreviewAudio = document.getElementById('voice-preview-audio');
+
+    if (voiceSelect && btnVoicePreview && voicePreviewAudio) {
+        // Monotonic token: any response whose token is stale (because the user
+        // changed voice or clicked again) is discarded instead of played.
+        let previewRequestId = 0;
+        // Id of the request that currently owns the loading state, so a stale
+        // response can never release the spinner of the live one.
+        let previewLoadingId = 0;
+        let previewBusy = false;
+
+        const setPreviewStatus = (msg, type = 'info') => {
+            voicePreviewStatus.textContent = msg;
+            voicePreviewStatus.classList.remove(
+                'hidden',
+                'bg-red-50', 'text-red-600',
+                'bg-blue-50', 'text-blue-600',
+                'bg-green-50', 'text-green-700'
+            );
+            if (type === 'error') {
+                voicePreviewStatus.classList.add('bg-red-50', 'text-red-600');
+            } else if (type === 'success') {
+                voicePreviewStatus.classList.add('bg-green-50', 'text-green-700');
+            } else {
+                voicePreviewStatus.classList.add('bg-blue-50', 'text-blue-600');
+            }
+        };
+
+        const clearPreviewStatus = () => {
+            voicePreviewStatus.textContent = '';
+            voicePreviewStatus.classList.add('hidden');
+        };
+
+        const setPreviewLoading = (loading) => {
+            previewBusy = loading;
+            btnVoicePreview.disabled = loading;
+            btnVoicePreview.setAttribute('aria-busy', loading ? 'true' : 'false');
+            voicePreviewLabel.textContent = loading ? 'Preparando muestra...' : 'Escuchar muestra';
+            voicePreviewIcon.classList.toggle('hidden', loading);
+            voicePreviewSpinner.classList.toggle('hidden', !loading);
+        };
+
+        // Drop any clip belonging to a previously selected voice.
+        const resetPreviewAudio = () => {
+            try { voicePreviewAudio.pause(); } catch (e) { /* not playing */ }
+            voicePreviewAudio.removeAttribute('src');
+            voicePreviewAudio.load();
+            voicePreviewAudio.classList.add('hidden');
+        };
+
+        voiceSelect.addEventListener('change', () => {
+            previewRequestId++; // invalidates any in-flight response
+            resetPreviewAudio();
+            clearPreviewStatus();
+        });
+
+        btnVoicePreview.addEventListener('click', async () => {
+            if (previewBusy) return; // block simultaneous clicks
+
+            const voice = voiceSelect.value;
+            if (!voice) {
+                setPreviewStatus('Selecciona una voz para escuchar la muestra.', 'error');
+                return;
+            }
+
+            // Claim the busy flag and paint the loading state synchronously,
+            // before any await: a second click during the request must find
+            // previewBusy already true, and the spinner must appear on click.
+            const requestId = ++previewRequestId;
+            previewLoadingId = requestId;
+            setPreviewLoading(true);
+            setPreviewStatus('Preparando la muestra de voz...', 'info');
+            voicePreviewAudio.muted = false;
+            resetPreviewAudio();
+
+            try {
+                const response = await fetch('/api/voice-preview', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: JSON.stringify({ voice: voice })
+                });
+
+                let data = null;
+                const contentType = response.headers.get('content-type') || '';
+                if (contentType.includes('application/json')) {
+                    data = await response.json();
+                }
+
+                if (requestId !== previewRequestId) return; // stale, user moved on
+
+                if (!response.ok || !data || !data.audio_url) {
+                    let message = (data && data.error) || 'No se pudo obtener la muestra de voz.';
+                    if (response.status === 429) {
+                        message = 'Demasiadas muestras seguidas. Espera unos segundos.';
+                    } else if (response.status >= 500) {
+                        message = 'El servidor no pudo generar la muestra. Inténtalo de nuevo.';
+                    }
+                    throw new Error(message);
+                }
+
+                voicePreviewAudio.src = data.audio_url;
+                voicePreviewAudio.classList.remove('hidden');
+                voicePreviewAudio.load();
+
+                try {
+                    await voicePreviewAudio.play();
+                    if (requestId !== previewRequestId) {
+                        voicePreviewAudio.pause();
+                        return;
+                    }
+                    setPreviewStatus('Reproduciendo la muestra.', 'success');
+                } catch (playErr) {
+                    if (requestId !== previewRequestId) return;
+                    setPreviewStatus(
+                        'Tu navegador bloqueó la reproducción automática. Pulsa el botón de play del reproductor de muestra.',
+                        'info'
+                    );
+                }
+            } catch (error) {
+                if (requestId !== previewRequestId) return;
+                console.error('Voice preview error:', error);
+                if (error.name === 'TypeError') {
+                    setPreviewStatus('No se pudo conectar con el servidor. Revisa tu conexión.', 'error');
+                } else {
+                    setPreviewStatus(error.message, 'error');
+                }
+            } finally {
+                // Only the request that owns the loading state may release it.
+                if (requestId === previewLoadingId) {
+                    setPreviewLoading(false);
+                }
+            }
+        });
+    }
+
     // --- Tab Switching Logic ---
     const tabBtns = document.querySelectorAll('.tab-btn');
     const tabContents = document.querySelectorAll('.tab-content');

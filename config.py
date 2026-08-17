@@ -13,7 +13,19 @@ class Config:
     # Use system /tmp directory for ephemeral, PaaS-friendly storage (avoids permission issues)
     UPLOAD_FOLDER = os.path.join(tempfile.gettempdir(), 'tts_uploads')
     GENERATED_FOLDER = os.path.join(tempfile.gettempdir(), 'tts_generated')
-    
+
+    # Separate folder for the voice preview cache. It is intentionally NOT the
+    # same folder as GENERATED_FOLDER: preview clips are short, shared between
+    # users and content-addressed, while generated audio is per-session.
+    #
+    # NOTE ON RENDER: this is ephemeral filesystem. Render replaces the
+    # container on every deploy, restart or scale event, so this cache only
+    # lives as long as the running instance. No external storage is used.
+    PREVIEW_FOLDER = os.path.join(tempfile.gettempdir(), 'tts_previews')
+    # Previews are deterministic and cheap to regenerate; keeping them for a
+    # day is enough to be useful without letting /tmp grow unbounded.
+    PREVIEW_MAX_AGE_SECONDS = int(os.environ.get('PREVIEW_MAX_AGE_SECONDS', 24 * 3600))
+
     # Secure Cookies settings for production environments
     SESSION_COOKIE_SECURE = os.environ.get('FLASK_ENV', 'development') == 'production'
     SESSION_COOKIE_HTTPONLY = True
@@ -29,3 +41,4 @@ class Config:
     # Ensure directories exist
     os.makedirs(UPLOAD_FOLDER, exist_ok=True)
     os.makedirs(GENERATED_FOLDER, exist_ok=True)
+    os.makedirs(PREVIEW_FOLDER, exist_ok=True)

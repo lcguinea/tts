@@ -2,6 +2,10 @@ import os
 import uuid
 import datetime
 import time
+import re
+import hashlib
+import tempfile
+import threading
 from flask import Flask, render_template, request, jsonify, send_from_directory, session, url_for
 from werkzeug.utils import secure_filename
 from flask_wtf.csrf import CSRFProtect, generate_csrf, CSRFError
@@ -9,6 +13,16 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
 from config import Config
+from voices import (
+    VOICE_GROUPS,
+    ALLOWED_VOICE_IDS,
+    DEFAULT_VOICE,
+    PREVIEW_TEXT,
+    PREVIEW_RATE,
+    PREVIEW_PITCH,
+    PREVIEW_VOLUME,
+    is_allowed as is_allowed_voice,
+)
 from utils import extract_text_from_file, generate_mp3_sync, cleanup_old_files, get_audio_duration, split_audio_ffmpeg, deduplicate_text, optimize_text_for_tts
 import logging
 from openai import OpenAI
@@ -59,11 +73,19 @@ def assign_session_id():
         session['user_id'] = str(uuid.uuid4())
     # Perform cleanup (files older than 1 hour)
     cleanup_old_files([app.config['UPLOAD_FOLDER'], app.config['GENERATED_FOLDER']], max_age_seconds=3600)
+    # The preview cache is deterministic and shared, so it gets a longer TTL.
+    cleanup_old_files([app.config['PREVIEW_FOLDER']],
+                      max_age_seconds=app.config['PREVIEW_MAX_AGE_SECONDS'])
 
 @app.route('/')
 def index():
     # Pass csrf_token to be used by our frontend AJAX requests
-    return render_template('index.html', csrf_token=generate_csrf())
+    return render_template(
+        'index.html',
+        csrf_token=generate_csrf(),
+        voice_groups=VOICE_GROUPS,
+        default_voice=DEFAULT_VOICE,
+    )
 
 @app.route('/api/generate', methods=['POST'])
 @limiter.limit("10 per minute")
@@ -119,16 +141,12 @@ def generate_audio():
     # Retrieve and Normalize TTS parameters
     voice = request.form.get('voice', '').strip()
     if not voice:
-        voice = 'es-ES-AlvaroNeural'
-        
-    # Support list of voices we show in UI
-    ALLOWED_VOICES = {
-        'es-ES-AlvaroNeural', 'es-MX-JorgeNeural', 'es-AR-TomasNeural', 
-        'es-CO-GonzaloNeural', 'es-US-AlonsoNeural', 'es-ES-ElviraNeural'
-    }
-    if voice not in ALLOWED_VOICES:
-        logger.warning(f"Unsupported voice requested: {voice}. Defaulting to Alvaro.")
-        voice = 'es-ES-AlvaroNeural'
+        voice = DEFAULT_VOICE
+
+    # Single shared catalog (voices.py), used by generation, preview and template
+    if voice not in ALLOWED_VOICE_IDS:
+        logger.warning(f"Unsupported voice requested: {voice}. Defaulting to {DEFAULT_VOICE}.")
+        voice = DEFAULT_VOICE
     
     try:
         # Better fallback logic for parameters
@@ -351,11 +369,134 @@ def download_audio(filename):
         return jsonify({'error': 'Acceso denegado.'}), 403
         
     return send_from_directory(
-        app.config['GENERATED_FOLDER'], 
-        secure_filename(filename), 
-        as_attachment=True, 
+        app.config['GENERATED_FOLDER'],
+        secure_filename(filename),
+        as_attachment=True,
         download_name="tts_audio.mp3"
     )
+
+# --- Voice Preview (independent from /api/generate) ---
+#
+# Previews are short, deterministic clips of a FIXED sentence. They never touch
+# the textarea, the uploaded file, the audio settings or the main player, and
+# they are stored in their own folder (PREVIEW_FOLDER) so they can never be
+# confused with, or evict, a user's generated audio.
+#
+# Caching is content-addressed: the filename is a hash of (voice, text,
+# parameters). Generation writes to a temporary file inside the same folder and
+# is then moved into place with os.replace(), which is atomic on POSIX and
+# Windows, so a concurrent reader either sees no file or a complete file.
+#
+# RENDER / EPHEMERAL FILESYSTEM: this cache lives on the instance's local disk.
+# Render recycles containers on deploy, restart and scaling, so the cache only
+# survives as long as the instance does. That is acceptable (a cold preview is
+# just one regeneration) and no external storage is introduced.
+
+PREVIEW_FILENAME_RE = re.compile(r'^preview_[0-9a-f]{32}\.mp3$')
+
+# One lock per voice, so two concurrent requests for the same voice generate the
+# clip once, while requests for different voices still run in parallel.
+_preview_locks = {}
+_preview_locks_guard = threading.Lock()
+
+
+def _get_preview_lock(voice):
+    with _preview_locks_guard:
+        lock = _preview_locks.get(voice)
+        if lock is None:
+            lock = threading.Lock()
+            _preview_locks[voice] = lock
+        return lock
+
+
+def _preview_filename(voice):
+    """Deterministic cache key from voice + fixed text + fixed parameters."""
+    digest_source = "|".join([
+        voice,
+        PREVIEW_TEXT,
+        str(PREVIEW_RATE),
+        str(PREVIEW_PITCH),
+        str(PREVIEW_VOLUME),
+    ])
+    digest = hashlib.sha256(digest_source.encode('utf-8')).hexdigest()[:32]
+    return f"preview_{digest}.mp3"
+
+
+@app.route('/api/voice-preview', methods=['POST'])
+@limiter.limit("20 per minute")
+def voice_preview():
+    """Generate (or serve from cache) a sample clip for a catalog voice."""
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        return jsonify({'error': 'Se esperaba un cuerpo JSON con el campo "voice".'}), 400
+
+    voice = payload.get('voice')
+    if isinstance(voice, str):
+        voice = voice.strip()
+    if not voice:
+        return jsonify({'error': 'Falta el campo "voice".'}), 400
+    if not is_allowed_voice(voice):
+        logger.warning(f"Preview rejected for voice outside catalog: {voice!r}")
+        return jsonify({'error': 'Voz no disponible.'}), 400
+
+    preview_folder = app.config['PREVIEW_FOLDER']
+    os.makedirs(preview_folder, exist_ok=True)
+
+    filename = _preview_filename(voice)
+    output_path = os.path.join(preview_folder, filename)
+
+    cached = os.path.exists(output_path)
+    if not cached:
+        lock = _get_preview_lock(voice)
+        with lock:
+            # Re-check inside the lock: another request may have finished while
+            # we were waiting, and regenerating would be pure waste.
+            if os.path.exists(output_path):
+                cached = True
+            else:
+                # Temp name starts with '.' so cleanup_old_files skips it.
+                fd, tmp_path = tempfile.mkstemp(
+                    dir=preview_folder, prefix='.preview_tmp_', suffix='.mp3'
+                )
+                os.close(fd)
+                try:
+                    generate_mp3_sync(
+                        PREVIEW_TEXT, voice,
+                        PREVIEW_RATE, PREVIEW_PITCH, PREVIEW_VOLUME,
+                        tmp_path
+                    )
+                    os.replace(tmp_path, output_path)
+                    logger.info(f"Preview generated for {voice} -> {filename}")
+                except Exception as e:
+                    if os.path.exists(tmp_path):
+                        try:
+                            os.remove(tmp_path)
+                        except OSError:
+                            pass
+                    logger.error(f"Preview generation failed for {voice}: {e}")
+                    return jsonify({'error': 'No se pudo generar la muestra de voz.'}), 500
+
+    return jsonify({
+        'success': True,
+        'voice': voice,
+        'cached': cached,
+        'audio_url': url_for('get_voice_preview', filename=filename),
+    })
+
+
+@app.route('/api/voice-preview/<filename>', methods=['GET'])
+def get_voice_preview(filename):
+    """Serve a cached preview clip. Only content-addressed preview names are
+    accepted, so this route cannot reach any other file or folder."""
+    safe_name = secure_filename(filename)
+    if not PREVIEW_FILENAME_RE.match(safe_name):
+        return jsonify({'error': 'Muestra no encontrada.'}), 404
+
+    preview_path = os.path.join(app.config['PREVIEW_FOLDER'], safe_name)
+    if not os.path.isfile(preview_path):
+        return jsonify({'error': 'Muestra no encontrada.'}), 404
+
+    return send_from_directory(app.config['PREVIEW_FOLDER'], safe_name, mimetype='audio/mpeg')
 
 # --- Global Error Handlers (Ensure JSON for all API errors) ---
 

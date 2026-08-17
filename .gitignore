@@ -1,1 +1,4 @@
 .env
+
+# claude-orchestrator: memoria durable local
+.orchestrator/
