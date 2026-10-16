@@ -23,11 +23,12 @@ from voices import (
     PREVIEW_VOLUME,
     is_allowed as is_allowed_voice,
 )
-from utils import extract_text_from_file, generate_mp3_sync, cleanup_old_files, get_audio_duration, split_audio_ffmpeg, deduplicate_text, optimize_text_for_tts
+from utils import extract_text_from_file, generate_mp3_sync, is_transient_tts_error, cleanup_old_files, get_audio_duration, split_audio_ffmpeg, deduplicate_text, optimize_text_for_tts
 import logging
 from openai import OpenAI
 from werkzeug.exceptions import HTTPException
 import subprocess
+from edge_tts.exceptions import NoAudioReceived
 
 # Initialize OpenAI Client (Lazy initialization or global)
 client = None
@@ -134,9 +135,25 @@ def generate_audio():
         return jsonify({'error': 'Por favor, introduce texto o sube un archivo válido.'}), 400
 
     # Optimization Step
+    # AI optimization is optional: without an API key (or if the client cannot be
+    # created) we fall back to local cleaning instead of failing the whole request.
     use_ai = request.form.get('use_ai') == 'true'
-    openai_client_instance = get_openai_client() if use_ai else None
+    openai_client_instance = None
+    if use_ai:
+        if not app.config.get('OPENAI_API_KEY'):
+            logger.warning("AI optimization requested but OPENAI_API_KEY is not configured. Using local cleaning only.")
+            use_ai = False
+        else:
+            try:
+                openai_client_instance = get_openai_client()
+            except Exception as e:
+                logger.error(f"Could not create OpenAI client: {e}. Using local cleaning only.")
+                use_ai = False
     final_text = optimize_text_for_tts(final_text, use_ai=use_ai, openai_client=openai_client_instance)
+
+    if not final_text.strip():
+        logger.warning("Text is empty after TTS optimization.")
+        return jsonify({'error': 'El texto no contiene palabras legibles después de limpiar símbolos.'}), 400
 
     # Retrieve and Normalize TTS parameters
     voice = request.form.get('voice', '').strip()
@@ -183,11 +200,20 @@ def generate_audio():
         logger.info(f"Generation complete. Duration: {total_gen_time:.2f}s for {len(final_text)} chars.")
     except Exception as e:
         err_msg = str(e)
-        logger.error(f"edge-tts generation failed: {err_msg}")
+        logger.error(f"edge-tts generation failed ({type(e).__name__}): {err_msg}", exc_info=True)
+        if os.path.exists(output_path):
+            try:
+                os.remove(output_path)
+            except OSError:
+                pass
         # Return the actual error message if it's related to patterns
         if "pattern" in err_msg.lower():
             return jsonify({'error': f'Error en parámetros de voz: {err_msg}'}), 400
-        return jsonify({'error': 'Error interno al generar el audio.'}), 500
+        if isinstance(e, NoAudioReceived):
+            return jsonify({'error': 'El servicio de voz no devolvió audio para este texto. Revisa que el texto tenga palabras legibles o prueba con otra voz.'}), 502
+        if is_transient_tts_error(e):
+            return jsonify({'error': 'No se pudo conectar con el servicio de voz de Microsoft. Inténtalo de nuevo en unos segundos.'}), 503
+        return jsonify({'error': f'Error al generar el audio ({type(e).__name__}).'}), 500
         
     audio_url = url_for('get_audio', filename=output_filename)
     download_url = url_for('download_audio', filename=output_filename)
