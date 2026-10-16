@@ -43,6 +43,19 @@ async def _generate_audio(text, voice, rate_str, pitch_str, volume_str, output_p
     )
     await communicate.save(output_path)
 
+# Network-level failures talking to Microsoft's TTS service. They are usually
+# transient (dropped websocket, clock-skew handshake, DNS/timeout), so they are
+# worth one retry before giving up.
+TTS_MAX_ATTEMPTS = 2
+
+
+def is_transient_tts_error(exc):
+    import aiohttp
+    from edge_tts.exceptions import WebSocketError, SkewAdjustmentError
+    return isinstance(exc, (aiohttp.ClientError, WebSocketError, SkewAdjustmentError,
+                            asyncio.TimeoutError, ConnectionError))
+
+
 def generate_mp3_sync(text, voice, rate, pitch, volume, output_path):
     """
     Robust synchronous wrapper for edge-tts asyncio requirements.
@@ -53,24 +66,35 @@ def generate_mp3_sync(text, voice, rate, pitch, volume, output_path):
     pitch_str = f"{pitch:+d}Hz"
     volume_str = f"{volume:+d}%"
     
-    import logging
     logger = logging.getLogger(__name__)
     logger.info(f"Generating MP3: voice={voice}, rate={rate_str}, pitch={pitch_str}, volume={volume_str}")
     
     if not text or not text.strip():
         raise ValueError("Text content is empty")
 
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    try:
-        loop.run_until_complete(
-            _generate_audio(text, voice, rate_str, pitch_str, volume_str, output_path)
-        )
-    except Exception as e:
-        logger.error(f"Async generate_audio failed: {str(e)}")
-        raise e
-    finally:
-        loop.close()
+    for attempt in range(1, TTS_MAX_ATTEMPTS + 1):
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            loop.run_until_complete(
+                _generate_audio(text, voice, rate_str, pitch_str, volume_str, output_path)
+            )
+            return
+        except Exception as e:
+            logger.error(f"Async generate_audio failed (attempt {attempt}/{TTS_MAX_ATTEMPTS}, "
+                         f"{type(e).__name__}): {str(e)}")
+            # Never leave a truncated MP3 behind
+            if os.path.exists(output_path):
+                try:
+                    os.remove(output_path)
+                except OSError:
+                    pass
+            if attempt >= TTS_MAX_ATTEMPTS or not is_transient_tts_error(e):
+                raise
+            time.sleep(1)
+        finally:
+            asyncio.set_event_loop(None)
+            loop.close()
 
 def extract_text_from_file(filepath):
     """
@@ -318,8 +342,8 @@ def optimize_text_for_tts(text, use_ai=False, openai_client=None):
                 "Reescribe el siguiente texto para que sea leído en voz alta por un sistema TTS "
                 "(Text-to-Speech). Convierte las tablas o listas complejas en un formato narrativo lineal, "
                 "elimina cualquier elemento visual, símbolos extraños, y acorta nombres propios repetitivos si "
-                "aparecen muchas veces. Devuelve SOLO el texto optimizado, sin introducciones.\\n\\n"
-                f"Texto original:\\n{text}"
+                "aparecen muchas veces. Devuelve SOLO el texto optimizado, sin introducciones.\n\n"
+                f"Texto original:\n{text}"
             )
             response = openai_client.chat.completions.create(
                 model="gpt-4o-mini",
