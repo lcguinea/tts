@@ -1,0 +1,316 @@
+{
+  "actualizada": 1791498273.92575,
+  "arranques_fallidos": 0,
+  "canal": "/Users/luiscarlos/Documents/Pruebas/tts-webapp/estado/esperas/ffbfedd68433490386fcc7f4c48d7faa",
+  "causa_desenlace": {
+    "anterior": {
+      "categoria": "FIN-4-CIERRE-NO-ACREDITADO",
+      "codigo": "sin-resultado-comunicable",
+      "desenlace": "BLOQUEADO",
+      "ejecucion_id": "ffbfedd68433490386fcc7f4c48d7faa",
+      "estado": "BLOQUEADA",
+      "familia": "recuperable",
+      "instante": 1791362173.393915,
+      "origen": "veredicto-de-resultado",
+      "papel": "",
+      "procedencia": "nucleo",
+      "recurso": "",
+      "version": "causa-desenlace-1"
+    },
+    "categoria": "FIN-16-ARCHIVADA",
+    "codigo": "",
+    "desenlace": "",
+    "ejecucion_id": "",
+    "estado": "ARCHIVADA",
+    "familia": "cierre",
+    "instante": 1791498273.9256692,
+    "origen": "cierre-administrativo-historico",
+    "papel": "",
+    "procedencia": "supervisor",
+    "recurso": "",
+    "version": "causa-desenlace-1"
+  },
+  "contexto_continuacion": "",
+  "conversacion": {
+    "turnos": [
+      {
+        "digest": "sha256:07e5fe5633ddf86a30309a366e5a36a9fdcec8b77b62d12b311171b7b5aeb3cc",
+        "huella_mensaje": "b8820b680b54978430ad8ce89b52c29dd3df546cfc853cd1c799aefbcc4ae8f8",
+        "momento": "2026-10-07T08:35:25.688966+00:00",
+        "perfil": {
+          "abstenciones": [
+            {
+              "campo": "interpretacion",
+              "efecto": "no se interpreta nada de esta respuesta y el camino determinista sigue igual",
+              "id": "ABS-1",
+              "motivo": "la respuesta encajó con la marca de E1-FC-10-HECHO-OPERATIVO-AFIRMADO",
+              "provenance_id": "PRV-2-INTERPRETE",
+              "regla": "E1-FC-10-HECHO-OPERATIVO-AFIRMADO"
+            },
+            {
+              "campo": "interpretacion",
+              "efecto": "el sello conserva la abstención: ningún consumidor lee de aquí un hecho, y el camino determinista sigue igual",
+              "id": "ABS-CAN-2",
+              "motivo": "la interpretación de origen no se pronunció",
+              "provenance_id": "PRV-3-CANONIZACION-DETERMINISTA",
+              "regla": "E2-CAN-8-ABSTENCION-HEREDADA"
+            }
+          ],
+          "clasificacion_tarea": {
+            "estado_validacion": "validado",
+            "factores": [
+              "FAC-TAREA-VACIA",
+              "FAC-LONGITUD-PALABRAS",
+              "FAC-MENCIONA-PRUEBAS",
+              "FAC-MENCIONA-DESPLIEGUE",
+              "FAC-MENCIONA-DOCUMENTACION",
+              "FAC-MENCIONA-REFACTOR"
+            ],
+            "nivel": "COMPLEJIDAD-1-TRIVIAL",
+            "provenance_id": "PRV-3-CANONIZACION-DETERMINISTA",
+            "reglas": [
+              "CPX-6-SOLO-LECTURA"
+            ]
+          },
+          "dependencias": [],
+          "dominios_especialistas": [],
+          "esquema": "argos/perfil-semantico-mision",
+          "estado": "abstenido",
+          "explicacion_auditable": [
+            "entrada: respuesta del recurso; regla: E1-FC-10-HECHO-OPERATIVO-AFIRMADO; resultado: perfil abstenido",
+            "entrada: conversación de 0 turnos; regla: conversacion-1; resultado: 0 vigentes, 0 referencias, sin contexto recuperado",
+            "entrada: texto de la misión; regla: E2-CAN-6-REGLA-DETECTADA-NO-PROPUESTA; resultado: 0 requisitos detectados por regla",
+            "entrada: propuestas del intérprete; regla: E2-CAN-5-PROPUESTA-CORROBORADA-POR-REGLA; resultado: 0 validados, 0 sin proyectar",
+            "entrada: texto de la misión; regla: E2-CAN-7-HECHOS-DETERMINISTAS-SELLADOS; resultado: 6 factores observados y clase COMPLEJIDAD-1-TRIVIAL"
+          ],
+          "factores": [
+            {
+              "descripcion": "no se dio texto de tarea",
+              "identificador": "FAC-TAREA-VACIA",
+              "influye_en_preferencia": false,
+              "provenance_id": "PRV-3-CANONIZACION-DETERMINISTA",
+              "valor": false
+            },
+            {
+              "descripcion": "palabras del texto normalizado",
+              "identificador": "FAC-LONGITUD-PALABRAS",
+              "influye_en_preferencia": false,
+              "provenance_id": "PRV-3-CANONIZACION-DETERMINISTA",
+              "valor": 20
+            },
+            {
+              "descripcion": "la tarea menciona pruebas",
+              "identificador": "FAC-MENCIONA-PRUEBAS",
+              "influye_en_preferencia": false,
+              "provenance_id": "PRV-3-CANONIZACION-DETERMINISTA",
+              "valor": false
+            },
+            {
+              "descripcion": "la tarea menciona despliegue",
+              "identificador": "FAC-MENCIONA-DESPLIEGUE",
+              "influye_en_preferencia": false,
+              "provenance_id": "PRV-3-CANONIZACION-DETERMINISTA",
+              "valor": false
+            },
+            {
+              "descripcion": "la tarea menciona documentación",
+              "identificador": "FAC-MENCIONA-DOCUMENTACION",
+              "influye_en_preferencia": false,
+              "provenance_id": "PRV-3-CANONIZACION-DETERMINISTA",
+              "valor": false
+            },
+            {
+              "descripcion": "la tarea menciona refactorización",
+              "identificador": "FAC-MENCIONA-REFACTOR",
+              "influye_en_preferencia": false,
+              "provenance_id": "PRV-3-CANONIZACION-DETERMINISTA",
+              "valor": false
+            }
+          ],
+          "huella_mensaje": "b8820b680b54978430ad8ce89b52c29dd3df546cfc853cd1c799aefbcc4ae8f8",
+          "incertidumbres": [],
+          "intencion": {
+            "clase": "ENCARGO",
+            "declaraciones": [
+              "tts-webapp"
+            ],
+            "directivas": [],
+            "huella": "b8820b680b54978430ad8ce89b52c29dd3df546cfc853cd1c799aefbcc4ae8f8",
+            "longitud": 135,
+            "version": "intencion-1"
+          },
+          "limites_de_alcance": [],
+          "objetivo_interpretado": "",
+          "papeles_sugeridos": [],
+          "provenance": [
+            {
+              "agente": "argos",
+              "calidad": "explicita",
+              "evidencia_asociada": [
+                "b8820b680b54978430ad8ce89b52c29dd3df546cfc853cd1c799aefbcc4ae8f8"
+              ],
+              "id": "PRV-1-INTENCION-P4",
+              "momento": "2026-10-07T08:35:13.655338+00:00",
+              "origen": "intencion_p4"
+            },
+            {
+              "agente": "claude",
+              "calidad": "inferida",
+              "evidencia_asociada": [
+                "contrato: interlocutor-1",
+                "recibo:bloque modelUsage de claude -p --output-format json"
+              ],
+              "id": "PRV-2-INTERPRETE",
+              "modelo": {
+                "efectivo": "claude-opus-5-5"
+              },
+              "momento": "2026-10-07T08:35:13.655338+00:00",
+              "origen": "interprete_ia"
+            },
+            {
+              "agente": "argos",
+              "calidad": "explicita",
+              "evidencia_asociada": [
+                "contrato: conversacion-1",
+                "turnos: 0",
+                "vigentes: 0"
+              ],
+              "id": "PRV-E6-1-CONTINUIDAD-CONVERSACIONAL",
+              "momento": "2026-10-07T08:35:25.688966+00:00",
+              "origen": "regla_determinista"
+            },
+            {
+              "agente": "argos",
+              "calidad": "explicita",
+              "evidencia_asociada": [
+                "contrato: canonizador-1",
+                "huella-texto:sha256:7c91c3ae91235bc3393754cafc949214206fe9c6a443060a67e645df379f425c"
+              ],
+              "id": "PRV-3-CANONIZACION-DETERMINISTA",
+              "momento": "2026-10-07T08:35:25.688966+00:00",
+              "origen": "regla_determinista"
+            }
+          ],
+          "requisitos": [],
+          "resultados_esperados": [],
+          "riesgos": [],
+          "sellado": true,
+          "task_id": "ffbfedd68433490386fcc7f4c48d7faa",
+          "version": 1
+        },
+        "regla_de_supersesion": "",
+        "supersede": [],
+        "turno": 0
+      }
+    ],
+    "version": "conversacion-1"
+  },
+  "creada": 1791362076.168472,
+  "diario": [
+    {
+      "a": "ACTIVA",
+      "causa": "la misión nace con su primera ejecución",
+      "de": null,
+      "instante": 1791362076.16848
+    },
+    {
+      "a": "BLOQUEADA",
+      "causa": "la sesión terminó en BLOQUEADO y no queda trabajo durable pendiente",
+      "de": "ACTIVA",
+      "evidencia": {
+        "causa_desenlace": {
+          "categoria": "FIN-4-CIERRE-NO-ACREDITADO",
+          "codigo": "sin-resultado-comunicable",
+          "desenlace": "BLOQUEADO",
+          "ejecucion_id": "ffbfedd68433490386fcc7f4c48d7faa",
+          "estado": "BLOQUEADA",
+          "familia": "recuperable",
+          "instante": 1791362173.393915,
+          "origen": "veredicto-de-resultado",
+          "papel": "",
+          "procedencia": "nucleo",
+          "recurso": "",
+          "version": "causa-desenlace-1"
+        },
+        "ejecucion_reservada": ""
+      },
+      "instante": 1791362175.5972228
+    },
+    {
+      "a": "ARCHIVADA",
+      "causa": "cierre administrativo (cierre-administrativo-historico): ejecución terminada en BLOQUEADA (causa FIN-4-CIERRE-NO-ACREDITADO, registro); sin trabajo en curso ni petición vigente; canal perdido: anterior al último arranque del sistema, que no deja nada vivo. No afirma éxito ni fallo; el desenlace original se conserva",
+      "de": "BLOQUEADA",
+      "evidencia": {
+        "causa_desenlace": {
+          "anterior": {
+            "categoria": "FIN-4-CIERRE-NO-ACREDITADO",
+            "codigo": "sin-resultado-comunicable",
+            "desenlace": "BLOQUEADO",
+            "ejecucion_id": "ffbfedd68433490386fcc7f4c48d7faa",
+            "estado": "BLOQUEADA",
+            "familia": "recuperable",
+            "instante": 1791362173.393915,
+            "origen": "veredicto-de-resultado",
+            "papel": "",
+            "procedencia": "nucleo",
+            "recurso": "",
+            "version": "causa-desenlace-1"
+          },
+          "categoria": "FIN-16-ARCHIVADA",
+          "codigo": "",
+          "desenlace": "",
+          "ejecucion_id": "",
+          "estado": "ARCHIVADA",
+          "familia": "cierre",
+          "instante": 1791498273.9256692,
+          "origen": "cierre-administrativo-historico",
+          "papel": "",
+          "procedencia": "supervisor",
+          "recurso": "",
+          "version": "causa-desenlace-1"
+        },
+        "estado_antes_archivar": "BLOQUEADA"
+      },
+      "instante": 1791498273.925684
+    }
+  ],
+  "ejecucion_reservada": "",
+  "ejecuciones": [
+    {
+      "ejecucion_id": "ffbfedd68433490386fcc7f4c48d7faa",
+      "estado_final": "BLOQUEADO",
+      "fin": 1791362175.596066,
+      "inicio": 1791362076.1684768,
+      "pid": 0
+    }
+  ],
+  "esperas": [],
+  "esquema": 1,
+  "estado": "ARCHIVADA",
+  "estado_antes_archivar": "BLOQUEADA",
+  "indeterminaciones": 0,
+  "intencion": {
+    "clase": "ENCARGO",
+    "declaraciones": [
+      "tts-webapp"
+    ],
+    "directivas": [],
+    "huella": "b8820b680b54978430ad8ce89b52c29dd3df546cfc853cd1c799aefbcc4ae8f8",
+    "longitud": 135,
+    "version": "intencion-1"
+  },
+  "max_reanudaciones": 6,
+  "objetivo": "Trabaja sobre tts-webapp.\nSolo lectura: dime cuántos directorios hay en la raíz del repositorio. No modifiques ni crees ningún fichero.",
+  "papeles_impuestos": {
+    "papeles": [],
+    "version": "papeles-impuestos-1"
+  },
+  "project_root": "/Users/luiscarlos/Documents/Pruebas/tts-webapp",
+  "protocolo_arranque": 1,
+  "proyecto": "tts-webapp",
+  "reanudacion_nro": 0,
+  "reanudacion_pendiente": 0,
+  "reanudaciones": 0,
+  "task_id": "ffbfedd68433490386fcc7f4c48d7faa",
+  "version": 4
+}

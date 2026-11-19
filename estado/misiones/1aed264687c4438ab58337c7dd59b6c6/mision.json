@@ -1,0 +1,271 @@
+{
+  "actualizada": 1791387003.984863,
+  "arranques_fallidos": 0,
+  "canal": "/Users/luiscarlos/Documents/Pruebas/tts-webapp/estado/esperas/1aed264687c4438ab58337c7dd59b6c6",
+  "causa_desenlace": {
+    "categoria": "FIN-1-COMPLETADA",
+    "codigo": "",
+    "desenlace": "COMPLETADO",
+    "ejecucion_id": "1aed264687c4438ab58337c7dd59b6c6",
+    "estado": "COMPLETADA",
+    "familia": "cierre",
+    "instante": 1791386998.665768,
+    "origen": "revision-final",
+    "papel": "",
+    "procedencia": "nucleo",
+    "recurso": "",
+    "version": "causa-desenlace-1"
+  },
+  "contexto_continuacion": "",
+  "conversacion": {
+    "turnos": [
+      {
+        "digest": "sha256:8c1f6101f921e0e414223603bffb8aeeca34f36a20edb2b40dfe3a61f91106da",
+        "huella_mensaje": "5e609d194739d5fef7dcbb23dfdb1babf4d43c64ace07b8a381a5294b06eac54",
+        "momento": "2026-10-07T15:26:42.369805+00:00",
+        "perfil": {
+          "abstenciones": [],
+          "clasificacion_tarea": {
+            "estado_validacion": "validado",
+            "factores": [
+              "FAC-TAREA-VACIA",
+              "FAC-LONGITUD-PALABRAS",
+              "FAC-MENCIONA-PRUEBAS",
+              "FAC-MENCIONA-DESPLIEGUE",
+              "FAC-MENCIONA-DOCUMENTACION",
+              "FAC-MENCIONA-REFACTOR"
+            ],
+            "nivel": "COMPLEJIDAD-1-TRIVIAL",
+            "provenance_id": "PRV-3-CANONIZACION-DETERMINISTA",
+            "reglas": [
+              "CPX-6-SOLO-LECTURA"
+            ]
+          },
+          "dependencias": [
+            "lectura_contexto",
+            "REQ-LECTURA-CONTEXTO",
+            "ejecucion_local"
+          ],
+          "dominios_especialistas": [],
+          "esquema": "argos/perfil-semantico-mision",
+          "estado": "completo",
+          "explicacion_auditable": [
+            "El encargo se dirige a la declaracion tts-webapp (certeza: explicita).",
+            "La restriccion de solo lectura es explicita: no hay que editar ni mutar nada.",
+            "El alcance son solo los ficheros .md de la raiz del repositorio, sin subdirectorios (certeza: explicita).",
+            "La salida esperada es una explicacion breve, con el proposito de cada fichero (certeza: explicita).",
+            "Para hacerlo basta leer el contexto del proyecto; la regla aplicable es REQ-LECTURA-CONTEXTO (certeza: inferida).",
+            "entrada: conversación de 0 turnos; regla: conversacion-1; resultado: 0 vigentes, 0 referencias, sin contexto recuperado",
+            "entrada: texto de la misión; regla: E2-CAN-6-REGLA-DETECTADA-NO-PROPUESTA; resultado: 0 requisitos detectados por regla",
+            "entrada: propuestas del intérprete; regla: E2-CAN-5-PROPUESTA-CORROBORADA-POR-REGLA; resultado: 0 validados, 0 sin proyectar",
+            "entrada: texto de la misión; regla: E2-CAN-7-HECHOS-DETERMINISTAS-SELLADOS; resultado: 6 factores observados y clase COMPLEJIDAD-1-TRIVIAL"
+          ],
+          "factores": [
+            {
+              "descripcion": "no se dio texto de tarea",
+              "identificador": "FAC-TAREA-VACIA",
+              "influye_en_preferencia": false,
+              "provenance_id": "PRV-3-CANONIZACION-DETERMINISTA",
+              "valor": false
+            },
+            {
+              "descripcion": "palabras del texto normalizado",
+              "identificador": "FAC-LONGITUD-PALABRAS",
+              "influye_en_preferencia": false,
+              "provenance_id": "PRV-3-CANONIZACION-DETERMINISTA",
+              "valor": 27
+            },
+            {
+              "descripcion": "la tarea menciona pruebas",
+              "identificador": "FAC-MENCIONA-PRUEBAS",
+              "influye_en_preferencia": false,
+              "provenance_id": "PRV-3-CANONIZACION-DETERMINISTA",
+              "valor": false
+            },
+            {
+              "descripcion": "la tarea menciona despliegue",
+              "identificador": "FAC-MENCIONA-DESPLIEGUE",
+              "influye_en_preferencia": false,
+              "provenance_id": "PRV-3-CANONIZACION-DETERMINISTA",
+              "valor": false
+            },
+            {
+              "descripcion": "la tarea menciona documentación",
+              "identificador": "FAC-MENCIONA-DOCUMENTACION",
+              "influye_en_preferencia": false,
+              "provenance_id": "PRV-3-CANONIZACION-DETERMINISTA",
+              "valor": false
+            },
+            {
+              "descripcion": "la tarea menciona refactorización",
+              "identificador": "FAC-MENCIONA-REFACTOR",
+              "influye_en_preferencia": false,
+              "provenance_id": "PRV-3-CANONIZACION-DETERMINISTA",
+              "valor": false
+            }
+          ],
+          "huella_mensaje": "5e609d194739d5fef7dcbb23dfdb1babf4d43c64ace07b8a381a5294b06eac54",
+          "incertidumbres": [],
+          "intencion": {
+            "clase": "ENCARGO",
+            "declaraciones": [
+              "tts-webapp"
+            ],
+            "directivas": [],
+            "huella": "5e609d194739d5fef7dcbb23dfdb1babf4d43c64ace07b8a381a5294b06eac54",
+            "longitud": 160,
+            "version": "intencion-1"
+          },
+          "limites_de_alcance": [
+            "Prohibido modificar, crear o borrar ficheros.",
+            "Sin edicion_mutacion ni git_mutacion_local.",
+            "Solo los ficheros .md de la raiz; no se recorren subdirectorios.",
+            "No hace falta red, git_remoto ni forge_gh.",
+            "La respuesta debe ser concisa, en pocas lineas."
+          ],
+          "objetivo_interpretado": "Inventariar en modo solo lectura los ficheros Markdown de la raiz de tts-webapp y resumir brevemente para que sirve cada uno.",
+          "papeles_sugeridos": [
+            "revisor"
+          ],
+          "provenance": [
+            {
+              "agente": "argos",
+              "calidad": "explicita",
+              "evidencia_asociada": [
+                "5e609d194739d5fef7dcbb23dfdb1babf4d43c64ace07b8a381a5294b06eac54"
+              ],
+              "id": "PRV-1-INTENCION-P4",
+              "momento": "2026-10-07T15:26:31.401926+00:00",
+              "origen": "intencion_p4"
+            },
+            {
+              "agente": "claude",
+              "calidad": "inferida",
+              "evidencia_asociada": [
+                "contrato: interlocutor-1",
+                "recibo:bloque modelUsage de claude -p --output-format json"
+              ],
+              "id": "PRV-2-INTERPRETE",
+              "modelo": {
+                "efectivo": "claude-opus-5-5"
+              },
+              "momento": "2026-10-07T15:26:31.401926+00:00",
+              "origen": "interprete_ia"
+            },
+            {
+              "agente": "argos",
+              "calidad": "explicita",
+              "evidencia_asociada": [
+                "contrato: conversacion-1",
+                "turnos: 0",
+                "vigentes: 0"
+              ],
+              "id": "PRV-E6-1-CONTINUIDAD-CONVERSACIONAL",
+              "momento": "2026-10-07T15:26:42.369805+00:00",
+              "origen": "regla_determinista"
+            },
+            {
+              "agente": "argos",
+              "calidad": "explicita",
+              "evidencia_asociada": [
+                "contrato: canonizador-1",
+                "huella-texto:sha256:8721bcc3236b6d96442c14dcdafce2dd44ec12a572d8178018c247522eba1ea0"
+              ],
+              "id": "PRV-3-CANONIZACION-DETERMINISTA",
+              "momento": "2026-10-07T15:26:42.369805+00:00",
+              "origen": "regla_determinista"
+            }
+          ],
+          "requisitos": [],
+          "resultados_esperados": [
+            "Lista de los ficheros .md presentes en la raiz de tts-webapp.",
+            "Una descripcion breve del proposito de cada fichero.",
+            "No queda ningun cambio en el repositorio."
+          ],
+          "riesgos": [
+            "Que se recorran subdirectorios y se salga del alcance pedido (solo la raiz).",
+            "Que se atribuya un proposito a un fichero sin haberlo leido.",
+            "Que se produzca alguna escritura accidental, contra la restriccion de solo lectura."
+          ],
+          "sellado": true,
+          "task_id": "1aed264687c4438ab58337c7dd59b6c6",
+          "version": 1
+        },
+        "regla_de_supersesion": "",
+        "supersede": [],
+        "turno": 0
+      }
+    ],
+    "version": "conversacion-1"
+  },
+  "creada": 1791386748.8698618,
+  "diario": [
+    {
+      "a": "ACTIVA",
+      "causa": "la misión nace con su primera ejecución",
+      "de": null,
+      "instante": 1791386748.8698702
+    },
+    {
+      "a": "COMPLETADA",
+      "causa": "el ejecutor acreditó el cierre y el canal no conserva ninguna espera de esta misión sin consumir",
+      "de": "ACTIVA",
+      "evidencia": {
+        "causa_desenlace": {
+          "categoria": "FIN-1-COMPLETADA",
+          "codigo": "",
+          "desenlace": "COMPLETADO",
+          "ejecucion_id": "1aed264687c4438ab58337c7dd59b6c6",
+          "estado": "COMPLETADA",
+          "familia": "cierre",
+          "instante": 1791386998.665768,
+          "origen": "revision-final",
+          "papel": "",
+          "procedencia": "nucleo",
+          "recurso": "",
+          "version": "causa-desenlace-1"
+        },
+        "ejecucion_reservada": ""
+      },
+      "instante": 1791387003.984669
+    }
+  ],
+  "ejecucion_reservada": "",
+  "ejecuciones": [
+    {
+      "ejecucion_id": "1aed264687c4438ab58337c7dd59b6c6",
+      "estado_final": "COMPLETADO",
+      "fin": 1791387003.984287,
+      "inicio": 1791386748.869868,
+      "pid": 0
+    }
+  ],
+  "esperas": [],
+  "esquema": 1,
+  "estado": "COMPLETADA",
+  "indeterminaciones": 0,
+  "intencion": {
+    "clase": "ENCARGO",
+    "declaraciones": [
+      "tts-webapp"
+    ],
+    "directivas": [],
+    "huella": "5e609d194739d5fef7dcbb23dfdb1babf4d43c64ace07b8a381a5294b06eac54",
+    "longitud": 160,
+    "version": "intencion-1"
+  },
+  "max_reanudaciones": 6,
+  "objetivo": "Trabaja sobre tts-webapp.\nSolo lectura, no modifiques nada: explícame en pocas líneas qué ficheros .md hay en la raíz del repositorio y para qué sirve cada uno.",
+  "papeles_impuestos": {
+    "papeles": [],
+    "version": "papeles-impuestos-1"
+  },
+  "project_root": "/Users/luiscarlos/Documents/Pruebas/tts-webapp",
+  "protocolo_arranque": 1,
+  "proyecto": "tts-webapp",
+  "reanudacion_nro": 0,
+  "reanudacion_pendiente": 0,
+  "reanudaciones": 0,
+  "task_id": "1aed264687c4438ab58337c7dd59b6c6",
+  "version": 3
+}

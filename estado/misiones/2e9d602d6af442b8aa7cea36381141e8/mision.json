@@ -1,0 +1,320 @@
+{
+  "actualizada": 1791498273.918771,
+  "arranques_fallidos": 0,
+  "canal": "/Users/luiscarlos/Documents/Pruebas/tts-webapp/estado/esperas/2e9d602d6af442b8aa7cea36381141e8",
+  "causa_desenlace": {
+    "anterior": {
+      "categoria": "FIN-4-CIERRE-NO-ACREDITADO",
+      "codigo": "sin-resultado-comunicable",
+      "desenlace": "BLOQUEADO",
+      "ejecucion_id": "2e9d602d6af442b8aa7cea36381141e8",
+      "estado": "BLOQUEADA",
+      "familia": "recuperable",
+      "instante": 1791361761.469853,
+      "origen": "veredicto-de-resultado",
+      "papel": "",
+      "procedencia": "nucleo",
+      "recurso": "",
+      "version": "causa-desenlace-1"
+    },
+    "categoria": "FIN-16-ARCHIVADA",
+    "codigo": "",
+    "desenlace": "",
+    "ejecucion_id": "",
+    "estado": "ARCHIVADA",
+    "familia": "cierre",
+    "instante": 1791498273.9186828,
+    "origen": "cierre-administrativo-historico",
+    "papel": "",
+    "procedencia": "supervisor",
+    "recurso": "",
+    "version": "causa-desenlace-1"
+  },
+  "contexto_continuacion": "",
+  "conversacion": {
+    "turnos": [
+      {
+        "digest": "sha256:e26ea8c2ddaebf88ac19eae7d9213d1817e31ab81e4409a04140a02815d448cf",
+        "huella_mensaje": "6d6e9f8d74e4d10fb0a817c22f20bb305c3baee6fb1b6a9a8201cf99a6da3bb7",
+        "momento": "2026-10-07T08:28:13.724930+00:00",
+        "perfil": {
+          "abstenciones": [],
+          "clasificacion_tarea": {
+            "estado_validacion": "validado",
+            "factores": [
+              "FAC-TAREA-VACIA",
+              "FAC-LONGITUD-PALABRAS",
+              "FAC-MENCIONA-PRUEBAS",
+              "FAC-MENCIONA-DESPLIEGUE",
+              "FAC-MENCIONA-DOCUMENTACION",
+              "FAC-MENCIONA-REFACTOR"
+            ],
+            "nivel": "COMPLEJIDAD-1-TRIVIAL",
+            "provenance_id": "PRV-3-CANONIZACION-DETERMINISTA",
+            "reglas": [
+              "CPX-6-SOLO-LECTURA"
+            ]
+          },
+          "dependencias": [
+            "lectura_contexto",
+            "ejecucion_local"
+          ],
+          "dominios_especialistas": [],
+          "esquema": "argos/perfil-semantico-mision",
+          "estado": "completo",
+          "explicacion_auditable": [
+            "El encargo se circunscribe al proyecto declarado tts-webapp.",
+            "La consulta pide dos datos: cuántos ficheros hay en la raíz del repositorio y cuál es el más reciente.",
+            "La restricción explícita de solo lectura excluye edicion_mutacion, edita_proyecto y git_mutacion_local.",
+            "Basta con leer el contexto del proyecto para enumerar los ficheros de la raíz y comparar sus fechas de modificación.",
+            "No hace falta red ni ninguna interacción remota.",
+            "entrada: conversación de 0 turnos; regla: conversacion-1; resultado: 0 vigentes, 0 referencias, sin contexto recuperado",
+            "entrada: texto de la misión; regla: E2-CAN-6-REGLA-DETECTADA-NO-PROPUESTA; resultado: 0 requisitos detectados por regla",
+            "entrada: propuestas del intérprete; regla: E2-CAN-5-PROPUESTA-CORROBORADA-POR-REGLA; resultado: 0 validados, 0 sin proyectar",
+            "entrada: texto de la misión; regla: E2-CAN-7-HECHOS-DETERMINISTAS-SELLADOS; resultado: 6 factores observados y clase COMPLEJIDAD-1-TRIVIAL"
+          ],
+          "factores": [
+            {
+              "descripcion": "no se dio texto de tarea",
+              "identificador": "FAC-TAREA-VACIA",
+              "influye_en_preferencia": false,
+              "provenance_id": "PRV-3-CANONIZACION-DETERMINISTA",
+              "valor": false
+            },
+            {
+              "descripcion": "palabras del texto normalizado",
+              "identificador": "FAC-LONGITUD-PALABRAS",
+              "influye_en_preferencia": false,
+              "provenance_id": "PRV-3-CANONIZACION-DETERMINISTA",
+              "valor": 26
+            },
+            {
+              "descripcion": "la tarea menciona pruebas",
+              "identificador": "FAC-MENCIONA-PRUEBAS",
+              "influye_en_preferencia": false,
+              "provenance_id": "PRV-3-CANONIZACION-DETERMINISTA",
+              "valor": false
+            },
+            {
+              "descripcion": "la tarea menciona despliegue",
+              "identificador": "FAC-MENCIONA-DESPLIEGUE",
+              "influye_en_preferencia": false,
+              "provenance_id": "PRV-3-CANONIZACION-DETERMINISTA",
+              "valor": false
+            },
+            {
+              "descripcion": "la tarea menciona documentación",
+              "identificador": "FAC-MENCIONA-DOCUMENTACION",
+              "influye_en_preferencia": false,
+              "provenance_id": "PRV-3-CANONIZACION-DETERMINISTA",
+              "valor": false
+            },
+            {
+              "descripcion": "la tarea menciona refactorización",
+              "identificador": "FAC-MENCIONA-REFACTOR",
+              "influye_en_preferencia": false,
+              "provenance_id": "PRV-3-CANONIZACION-DETERMINISTA",
+              "valor": false
+            }
+          ],
+          "huella_mensaje": "6d6e9f8d74e4d10fb0a817c22f20bb305c3baee6fb1b6a9a8201cf99a6da3bb7",
+          "incertidumbres": [],
+          "intencion": {
+            "clase": "ENCARGO",
+            "declaraciones": [
+              "tts-webapp"
+            ],
+            "directivas": [],
+            "huella": "6d6e9f8d74e4d10fb0a817c22f20bb305c3baee6fb1b6a9a8201cf99a6da3bb7",
+            "longitud": 158,
+            "version": "intencion-1"
+          },
+          "limites_de_alcance": [
+            "Solo cuenta la raíz del repositorio, sin recorrer los subdirectorios.",
+            "No se modifica, crea ni borra ningún fichero.",
+            "No se usa red ni operaciones remotas.",
+            "La respuesta se limita al recuento y a identificar el fichero más reciente."
+          ],
+          "objetivo_interpretado": "Inspeccionar en modo solo lectura la raíz del repositorio tts-webapp para dar el número de ficheros que contiene e identificar cuál se modificó más recientemente.",
+          "papeles_sugeridos": [
+            "diagnosticador"
+          ],
+          "provenance": [
+            {
+              "agente": "argos",
+              "calidad": "explicita",
+              "evidencia_asociada": [
+                "6d6e9f8d74e4d10fb0a817c22f20bb305c3baee6fb1b6a9a8201cf99a6da3bb7"
+              ],
+              "id": "PRV-1-INTENCION-P4",
+              "momento": "2026-10-07T08:27:57.243056+00:00",
+              "origen": "intencion_p4"
+            },
+            {
+              "agente": "claude",
+              "calidad": "inferida",
+              "evidencia_asociada": [
+                "contrato: interlocutor-1",
+                "recibo:bloque modelUsage de claude -p --output-format json"
+              ],
+              "id": "PRV-2-INTERPRETE",
+              "modelo": {
+                "efectivo": "claude-opus-5-5"
+              },
+              "momento": "2026-10-07T08:27:57.243056+00:00",
+              "origen": "interprete_ia"
+            },
+            {
+              "agente": "argos",
+              "calidad": "explicita",
+              "evidencia_asociada": [
+                "contrato: conversacion-1",
+                "turnos: 0",
+                "vigentes: 0"
+              ],
+              "id": "PRV-E6-1-CONTINUIDAD-CONVERSACIONAL",
+              "momento": "2026-10-07T08:28:13.724930+00:00",
+              "origen": "regla_determinista"
+            },
+            {
+              "agente": "argos",
+              "calidad": "explicita",
+              "evidencia_asociada": [
+                "contrato: canonizador-1",
+                "huella-texto:sha256:42625bd7d07d6ef502f150d7b351b7a70ff45d3358773391044e2e37eccc1e50"
+              ],
+              "id": "PRV-3-CANONIZACION-DETERMINISTA",
+              "momento": "2026-10-07T08:28:13.724930+00:00",
+              "origen": "regla_determinista"
+            }
+          ],
+          "requisitos": [],
+          "resultados_esperados": [
+            "Número de ficheros que hay en la raíz de tts-webapp.",
+            "Nombre del fichero de la raíz con la modificación más reciente, junto con su fecha."
+          ],
+          "riesgos": [
+            "Que no esté claro si deben contarse los ficheros ocultos o los directorios como ficheros.",
+            "Que 'más reciente' se interprete por fecha de modificación en disco o por último commit, y den resultados distintos.",
+            "Que alguna acción incidental escriba en el proyecto pese a la restricción de solo lectura."
+          ],
+          "sellado": true,
+          "task_id": "2e9d602d6af442b8aa7cea36381141e8",
+          "version": 1
+        },
+        "regla_de_supersesion": "",
+        "supersede": [],
+        "turno": 0
+      }
+    ],
+    "version": "conversacion-1"
+  },
+  "creada": 1791361642.5433412,
+  "diario": [
+    {
+      "a": "ACTIVA",
+      "causa": "la misión nace con su primera ejecución",
+      "de": null,
+      "instante": 1791361642.543355
+    },
+    {
+      "a": "BLOQUEADA",
+      "causa": "la sesión terminó en BLOQUEADO y no queda trabajo durable pendiente",
+      "de": "ACTIVA",
+      "evidencia": {
+        "causa_desenlace": {
+          "categoria": "FIN-4-CIERRE-NO-ACREDITADO",
+          "codigo": "sin-resultado-comunicable",
+          "desenlace": "BLOQUEADO",
+          "ejecucion_id": "2e9d602d6af442b8aa7cea36381141e8",
+          "estado": "BLOQUEADA",
+          "familia": "recuperable",
+          "instante": 1791361761.469853,
+          "origen": "veredicto-de-resultado",
+          "papel": "",
+          "procedencia": "nucleo",
+          "recurso": "",
+          "version": "causa-desenlace-1"
+        },
+        "ejecucion_reservada": ""
+      },
+      "instante": 1791361763.937214
+    },
+    {
+      "a": "ARCHIVADA",
+      "causa": "cierre administrativo (cierre-administrativo-historico): ejecución terminada en BLOQUEADA (causa FIN-4-CIERRE-NO-ACREDITADO, registro); sin trabajo en curso ni petición vigente; canal perdido: anterior al último arranque del sistema, que no deja nada vivo. No afirma éxito ni fallo; el desenlace original se conserva",
+      "de": "BLOQUEADA",
+      "evidencia": {
+        "causa_desenlace": {
+          "anterior": {
+            "categoria": "FIN-4-CIERRE-NO-ACREDITADO",
+            "codigo": "sin-resultado-comunicable",
+            "desenlace": "BLOQUEADO",
+            "ejecucion_id": "2e9d602d6af442b8aa7cea36381141e8",
+            "estado": "BLOQUEADA",
+            "familia": "recuperable",
+            "instante": 1791361761.469853,
+            "origen": "veredicto-de-resultado",
+            "papel": "",
+            "procedencia": "nucleo",
+            "recurso": "",
+            "version": "causa-desenlace-1"
+          },
+          "categoria": "FIN-16-ARCHIVADA",
+          "codigo": "",
+          "desenlace": "",
+          "ejecucion_id": "",
+          "estado": "ARCHIVADA",
+          "familia": "cierre",
+          "instante": 1791498273.9186828,
+          "origen": "cierre-administrativo-historico",
+          "papel": "",
+          "procedencia": "supervisor",
+          "recurso": "",
+          "version": "causa-desenlace-1"
+        },
+        "estado_antes_archivar": "BLOQUEADA"
+      },
+      "instante": 1791498273.918699
+    }
+  ],
+  "ejecucion_reservada": "",
+  "ejecuciones": [
+    {
+      "ejecucion_id": "2e9d602d6af442b8aa7cea36381141e8",
+      "estado_final": "BLOQUEADO",
+      "fin": 1791361763.936519,
+      "inicio": 1791361642.543349,
+      "pid": 0
+    }
+  ],
+  "esperas": [],
+  "esquema": 1,
+  "estado": "ARCHIVADA",
+  "estado_antes_archivar": "BLOQUEADA",
+  "indeterminaciones": 0,
+  "intencion": {
+    "clase": "ENCARGO",
+    "declaraciones": [
+      "tts-webapp"
+    ],
+    "directivas": [],
+    "huella": "6d6e9f8d74e4d10fb0a817c22f20bb305c3baee6fb1b6a9a8201cf99a6da3bb7",
+    "longitud": 158,
+    "version": "intencion-1"
+  },
+  "max_reanudaciones": 6,
+  "objetivo": "Trabaja sobre tts-webapp.\nSolo lectura: dime cuántos ficheros hay en la raíz del repositorio y cuál es el más reciente. No modifiques ni crees ningún fichero.",
+  "papeles_impuestos": {
+    "papeles": [],
+    "version": "papeles-impuestos-1"
+  },
+  "project_root": "/Users/luiscarlos/Documents/Pruebas/tts-webapp",
+  "protocolo_arranque": 1,
+  "proyecto": "tts-webapp",
+  "reanudacion_nro": 0,
+  "reanudacion_pendiente": 0,
+  "reanudaciones": 0,
+  "task_id": "2e9d602d6af442b8aa7cea36381141e8",
+  "version": 4
+}

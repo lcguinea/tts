@@ -1,0 +1,9 @@
+{
+  "arranque": "2026-10-07T15:25:57+00:00",
+  "ejecucion_id": "1aed264687c4438ab58337c7dd59b6c6",
+  "estado": "ARRANCADO",
+  "instante": 1791386757.271383,
+  "pid": 11983,
+  "reanudacion_nro": 0,
+  "task_id": "1aed264687c4438ab58337c7dd59b6c6"
+}
