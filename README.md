@@ -2,6 +2,8 @@
 
 *Tu texto, en voz alta.* (Antes «TTS & STT Webapp».)
 
+**Voces premium (Google Cloud TTS):** grupo «⭐ Premium» del selector (Chirp 3 HD 30 $/M, Neural2 16 $/M, Studio 160 $/M; precios en `voices.py` → `GOOGLE_TIERS`). Requiere `GOOGLE_API_KEY` con la API Text-to-Speech activada. Antes de generar, `/api/estimate` prepara el texto (con IA si se pide), devuelve caracteres y coste y el texto preparado; `/api/generate` solo acepta voces premium con `prepared=true`, así se cobra exactamente lo presupuestado. Código en `google_tts.py` (trozos de ≤4.500 bytes en paralelo).
+
 **Marca:** símbolo y favicons en `static/brand/`, manifiesto en `static/manifest.webmanifest`. Colores Parla (guayaba `#E8604F`, guayaba-tinta `#B13B29`, arena `#FFF8F3`, cacao `#3A2629`, maíz `#F4B740`, nopal `#256A60`) mapeados sobre los nombres de Tailwind en `templates/index.html` (blue/indigo = guayaba, slate = arena→cacao, green = nopal, amber = maíz). Tipografías: Fredoka (titulares), Nunito (texto), DM Mono (cifras). Manual de marca completo: https://claude.ai/artifact/H6AT6aSHC1UG2xnzmXpy3P
 
 Una WebApp Full-Stack construida en **Python 3.11 + Flask** que ofrece herramientas de voz inteligentes:

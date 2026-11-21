@@ -111,6 +111,71 @@ VOICE_GROUPS = [
     },
 ]
 
+# --------------------------------------------------------------------------
+# Voces PREMIUM (Google Cloud Text-to-Speech, con coste por carácter)
+# --------------------------------------------------------------------------
+# Precios oficiales en USD por millón de caracteres y tramo gratuito mensual
+# por tipo de voz, según https://cloud.google.com/text-to-speech/pricing
+# (consultado el 21-11-2026). Si Google los cambia, actualizar SOLO aquí.
+GOOGLE_TIERS = {
+    "chirp3-hd": {"label": "HD", "name": "Chirp 3 HD", "price_per_million": 30.0, "free_chars_per_month": 1_000_000},
+    "neural2": {"label": "Neural", "name": "Neural2", "price_per_million": 16.0, "free_chars_per_month": 1_000_000},
+    "studio": {"label": "Estudio", "name": "Studio", "price_per_million": 160.0, "free_chars_per_month": 1_000_000},
+}
+
+
+def _google_voice(voice_id, name, country, flag, gender, tier, language_code):
+    t = GOOGLE_TIERS[tier]
+    return {
+        "id": voice_id,
+        "name": name,
+        "country": country,
+        "flag": flag,
+        "gender": gender,
+        "provider": "google",
+        "tier": tier,
+        "tier_label": t["label"],
+        "tier_name": t["name"],
+        "price_per_million": t["price_per_million"],
+        "free_chars_per_month": t["free_chars_per_month"],
+        "language_code": language_code,
+        # Studio and Chirp 3 HD reject the pitch parameter.
+        "supports_pitch": tier == "neural2",
+    }
+
+
+PREMIUM_VOICE_GROUPS = [
+    {
+        "id": "premium-es-ES",
+        "label": "Premium · España (con coste)",
+        "flag": "⭐",
+        "premium": True,
+        "voices": [
+            _google_voice("es-ES-Chirp3-HD-Aoede", "Aoede", "España", "🇪🇸", "femenina", "chirp3-hd", "es-ES"),
+            _google_voice("es-ES-Chirp3-HD-Charon", "Charon", "España", "🇪🇸", "masculina", "chirp3-hd", "es-ES"),
+            _google_voice("es-ES-Neural2-A", "Lucía", "España", "🇪🇸", "femenina", "neural2", "es-ES"),
+            _google_voice("es-ES-Neural2-F", "Mateo", "España", "🇪🇸", "masculina", "neural2", "es-ES"),
+            _google_voice("es-ES-Studio-C", "Carmen", "España", "🇪🇸", "femenina", "studio", "es-ES"),
+            _google_voice("es-ES-Studio-F", "Pablo", "España", "🇪🇸", "masculina", "studio", "es-ES"),
+        ],
+    },
+    {
+        "id": "premium-es-US",
+        "label": "Premium · Latinoamérica (con coste)",
+        "flag": "⭐",
+        "premium": True,
+        "voices": [
+            _google_voice("es-US-Chirp3-HD-Kore", "Kore", "Latinoamérica", "🌎", "femenina", "chirp3-hd", "es-US"),
+            _google_voice("es-US-Chirp3-HD-Puck", "Puck", "Latinoamérica", "🌎", "masculina", "chirp3-hd", "es-US"),
+            _google_voice("es-US-Neural2-A", "Valeria", "Latinoamérica", "🌎", "femenina", "neural2", "es-US"),
+            _google_voice("es-US-Neural2-B", "Diego", "Latinoamérica", "🌎", "masculina", "neural2", "es-US"),
+            _google_voice("es-US-Studio-B", "Andrés", "Latinoamérica", "🌎", "masculina", "studio", "es-US"),
+        ],
+    },
+]
+
+VOICE_GROUPS.extend(PREMIUM_VOICE_GROUPS)
+
 # Ya no hay voces pendientes de verificación: la validación real contra
 # `edge_tts.list_voices()` está hecha (véase la cabecera del módulo).
 PENDING_VOICES = []
@@ -127,6 +192,9 @@ def _build_label(group, voice):
     """Etiqueta visible: bandera + nombre amigable (+ país si el grupo agrupa
     varios países o si el país forma parte del formato acordado). Nunca
     contiene el identificador técnico de la voz."""
+    if voice.get("provider") == "google":
+        return "{flag} {name} · {tier_label} · {price:g} $/millón".format(
+            price=voice["price_per_million"], **voice)
     if group["id"] == "latam":
         return "{flag} {name} · {country}".format(**voice)
     if group["id"] == "es-MX":
@@ -136,6 +204,8 @@ def _build_label(group, voice):
 
 for _group in VOICE_GROUPS:
     for _voice in _group["voices"]:
+        _voice.setdefault("provider", "edge")
+        _voice.setdefault("price_per_million", 0.0)
         _voice["label"] = _build_label(_group, _voice)
 
 ALL_VOICES = [voice for group in VOICE_GROUPS for voice in group["voices"]]
@@ -143,6 +213,11 @@ ALL_VOICES = [voice for group in VOICE_GROUPS for voice in group["voices"]]
 ALLOWED_VOICE_IDS = frozenset(voice["id"] for voice in ALL_VOICES)
 
 VOICES_BY_ID = {voice["id"]: voice for voice in ALL_VOICES}
+
+
+def is_premium(voice_id):
+    voice = VOICES_BY_ID.get(voice_id)
+    return bool(voice and voice["provider"] == "google")
 
 
 def is_allowed(voice_id):

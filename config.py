@@ -38,6 +38,9 @@ class Config:
     ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY')
     ANTHROPIC_MODEL = os.environ.get('ANTHROPIC_MODEL', 'claude-haiku-5-5')
 
+    # Premium voices (Google Cloud Text-to-Speech, billed per character)
+    GOOGLE_API_KEY = os.environ.get('GOOGLE_API_KEY')
+
     # Transcription Settings (OpenAI API; Anthropic has no speech-to-text)
     OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
     OPENAI_TRANSCRIBE_MODEL = os.environ.get('OPENAI_TRANSCRIBE_MODEL', 'gpt-4o-mini-transcribe')

@@ -144,11 +144,16 @@
                                 {% for group in voice_groups %}
                                 <optgroup label="{{ group.flag }} {{ group.label }}">
                                     {% for voice in group.voices %}
-                                    <option value="{{ voice.id }}"{% if voice.id == default_voice %} selected{% endif %}>{{ voice.label }}</option>
+                                    <option value="{{ voice.id }}" data-provider="{{ voice.provider }}" data-price="{{ voice.price_per_million }}"{% if voice.tier_name %} data-tier="{{ voice.tier_name }}" data-free="{{ voice.free_chars_per_month }}"{% endif %}{% if voice.id == default_voice %} selected{% endif %}>{{ voice.label }}</option>
                                     {% endfor %}
                                 </optgroup>
                                 {% endfor %}
                             </select>
+
+                            <!-- Cost hint: free voice, or live estimate for premium (Google) voices -->
+                            <p id="voice-cost-hint" class="mt-2 text-xs font-semibold text-green-700 flex items-center gap-1" aria-live="polite">
+                                <i class="ph ph-check-circle"></i> <span>Voz gratuita</span>
+                            </p>
 
                             <!-- Voice preview: fully independent from the main player -->
                             <button type="button" id="btn-voice-preview"
@@ -208,6 +213,26 @@
                             <i class="ph-fill ph-magic-wand text-blue-500 mr-1"></i> Leerlo más natural (IA)
                             <span class="block text-xs font-normal text-slate-500 mt-0.5">Convierte tablas y listas en frases y simplifica nombres repetidos. Tarda un poco más.</span>
                         </label>
+                    </div>
+
+                    <!-- Premium cost confirmation (filled by app.js after /api/estimate) -->
+                    <div id="cost-confirm" class="hidden rounded-2xl border border-amber-300 bg-amber-50 p-5 space-y-4" role="region" aria-labelledby="cost-confirm-title" aria-live="polite">
+                        <div class="flex items-start gap-3">
+                            <i class="ph-fill ph-coins text-2xl text-amber-700 mt-0.5" aria-hidden="true"></i>
+                            <div class="min-w-0">
+                                <h3 id="cost-confirm-title" class="font-display text-xl font-semibold text-slate-800">Este audio cuesta <span id="cost-confirm-amount" class="tabular-nums"></span></h3>
+                                <p id="cost-confirm-detail" class="text-sm text-slate-700 mt-1"></p>
+                                <p id="cost-confirm-free" class="text-xs text-slate-600 mt-2"></p>
+                            </div>
+                        </div>
+                        <div class="flex flex-col sm:flex-row gap-3">
+                            <button type="button" id="btn-cost-accept" class="flex-1 inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-5 rounded-2xl shadow-sm transition-all focus:outline-none focus:ring-4 focus:ring-blue-300">
+                                <i class="ph-fill ph-play-circle text-xl" aria-hidden="true"></i> <span id="btn-cost-accept-text">Generar</span>
+                            </button>
+                            <button type="button" id="btn-cost-cancel" class="sm:w-auto inline-flex items-center justify-center gap-2 bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 font-bold py-3 px-5 rounded-2xl transition-all">
+                                Cancelar
+                            </button>
+                        </div>
                     </div>
 
                     <!-- Action Button -->

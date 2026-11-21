@@ -157,6 +157,118 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     // --- Form Submission Logic ---
+    // --- Premium voices: cost hint and quote before generating ---
+    const voiceSelectEl = document.getElementById('voice');
+    const useAiInput = document.getElementById('use_ai');
+    const costHint = document.getElementById('voice-cost-hint');
+    const costConfirm = document.getElementById('cost-confirm');
+    const costAmount = document.getElementById('cost-confirm-amount');
+    const costDetail = document.getElementById('cost-confirm-detail');
+    const costFree = document.getElementById('cost-confirm-free');
+    const btnCostAccept = document.getElementById('btn-cost-accept');
+    const btnCostAcceptText = document.getElementById('btn-cost-accept-text');
+    const btnCostCancel = document.getElementById('btn-cost-cancel');
+    let pendingQuote = null;
+
+    const formatInt = (n) => new Intl.NumberFormat('es-ES').format(n);
+    const formatUsd = (v) => {
+        const small = v > 0 && v < 0.01;
+        return new Intl.NumberFormat('es-ES', {
+            style: 'currency', currency: 'USD', currencyDisplay: 'narrowSymbol',
+            minimumFractionDigits: small ? 3 : 2,
+            maximumFractionDigits: small ? 4 : 2,
+        }).format(v);
+    };
+
+    function selectedVoice() {
+        const opt = voiceSelectEl.selectedOptions[0];
+        return {
+            id: opt.value,
+            premium: opt.dataset.provider === 'google',
+            price: parseFloat(opt.dataset.price || '0'),
+            tier: opt.dataset.tier || '',
+            free: parseInt(opt.dataset.free || '0', 10),
+        };
+    }
+
+    function updateCostHint() {
+        const v = selectedVoice();
+        if (!v.premium) {
+            costHint.className = 'mt-2 text-xs font-semibold text-green-700 flex items-center gap-1';
+            costHint.innerHTML = '<i class="ph ph-check-circle"></i> <span>Voz gratuita</span>';
+            return;
+        }
+        const chars = textContent.value.length;
+        const text = chars
+            ? `Voz premium (${v.tier}): unos ${formatUsd(chars * v.price / 1e6)} por ${formatInt(chars)} caracteres. Te diré el precio exacto antes de generar.`
+            : `Voz premium (${v.tier}): ${v.price} $ por millón de caracteres. Te diré el precio exacto antes de generar.`;
+        costHint.className = 'mt-2 text-xs font-semibold text-amber-800 flex items-start gap-1';
+        costHint.innerHTML = '<i class="ph-fill ph-coins mt-0.5"></i> <span></span>';
+        costHint.querySelector('span').textContent = text;
+    }
+
+    function hideQuote() {
+        pendingQuote = null;
+        costConfirm.classList.add('hidden');
+        btnSubmit.classList.remove('hidden');
+    }
+
+    function showQuote(q) {
+        pendingQuote = q;
+        costAmount.textContent = formatUsd(q.cost_usd);
+        costDetail.textContent = `${formatInt(q.chars)} caracteres × ${q.price_per_million} $ por millón (voz ${q.tier_name} de Google).`;
+        costFree.textContent = `Google regala ${formatInt(q.free_chars_per_month)} caracteres al mes en voces ${q.tier_name}. Si este mes no los has gastado, este audio te saldrá gratis.`;
+        btnCostAcceptText.textContent = `Generar por ${formatUsd(q.cost_usd)}`;
+        btnSubmit.classList.add('hidden');
+        costConfirm.classList.remove('hidden');
+        btnCostAccept.focus();
+    }
+
+    voiceSelectEl.addEventListener('change', () => { updateCostHint(); hideQuote(); });
+    textContent.addEventListener('input', () => { updateCostHint(); if (pendingQuote) hideQuote(); });
+    fileInput.addEventListener('change', hideQuote);
+    if (useAiInput) useAiInput.addEventListener('change', hideQuote);
+    btnCostCancel.addEventListener('click', () => { hideQuote(); setStatus('Cancelado. No se ha generado nada.', 'info'); });
+    btnCostAccept.addEventListener('click', () => {
+        if (!pendingQuote) return;
+        const fd = new FormData(form);
+        fd.set('text_content', pendingQuote.prepared_text);
+        fd.delete('file');
+        fd.set('voice', pendingQuote.voice);
+        fd.set('prepared', 'true');
+        hideQuote();
+        runGeneration(fd, pendingQuoteLength(fd));
+    });
+    const pendingQuoteLength = (fd) => (fd.get('text_content') || '').length;
+    updateCostHint();
+
+    async function requestQuote() {
+        btnSubmit.disabled = true;
+        submitText.textContent = 'Calculando el coste…';
+        submitIcon.classList.add('hidden');
+        submitSpinner.classList.remove('hidden');
+        setStatus(useAiInput && useAiInput.checked ? 'Preparando el texto con IA para calcular el coste…' : 'Calculando el coste…', 'info');
+        const fd = new FormData(form);
+        if (!fd.has('csrf_token') && csrfToken) fd.append('csrf_token', csrfToken);
+        try {
+            const response = await fetch('/api/estimate', { method: 'POST', headers: { 'X-CSRFToken': csrfToken }, body: fd });
+            const ct = response.headers.get('content-type') || '';
+            if (!ct.includes('application/json')) throw new Error(`Error del servidor (${response.status}). Inténtalo de nuevo más tarde.`);
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || 'No he podido calcular el coste.');
+            setStatus('', 'info');
+            statusMessage.classList.add('hidden');
+            showQuote(data);
+        } catch (error) {
+            setStatus(error.message, 'error');
+        } finally {
+            btnSubmit.disabled = false;
+            submitText.textContent = 'Escuchar';
+            submitSpinner.classList.add('hidden');
+            submitIcon.classList.remove('hidden');
+        }
+    }
+
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
         
@@ -173,6 +285,16 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!proceed) return;
         }
 
+        if (selectedVoice().premium) {
+            await requestQuote();
+            return;
+        }
+
+        const formData = new FormData(form);
+        runGeneration(formData, textLen);
+    });
+
+    async function runGeneration(formData, textLen) {
         // CRITICAL FOR iOS (WebKit): "Unlock" the audio element on user gesture
         // chrome/edge on iOS require a direct user interaction to play audio later from an async fetch
         audio.play().then(() => {
@@ -191,7 +313,6 @@ document.addEventListener('DOMContentLoaded', () => {
         
         playerSection.classList.add('hidden'); // Hide old player
         
-        const formData = new FormData(form);
         // Explicitly ensuring csrf_token is in the formData for certain mobile browsers
         if (!formData.has('csrf_token') && csrfToken) {
             formData.append('csrf_token', csrfToken);
@@ -221,7 +342,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             // Success
-            setStatus("¡Audio generado con éxito!", "success");
+            setStatus(data.premium ? `Tu audio está listo. Coste: ${formatUsd(data.cost_usd)} (${formatInt(data.billed_chars)} caracteres).` : "Tu audio está listo.", "success");
             
             // Setup Player
             // For WebKit (iOS), explicitly calling .load() after setting .src is more reliable
@@ -258,7 +379,7 @@ document.addEventListener('DOMContentLoaded', () => {
             submitSpinner.classList.add('hidden');
             submitIcon.classList.remove('hidden');
         }
-    });
+    }
 
     // --- Audio Player Logic ---
     
