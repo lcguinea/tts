@@ -3,35 +3,75 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TTS Webapp - Texto a Voz Premium</title>
+    <title>Parla · Tu texto, en voz alta</title>
+    <meta name="description" content="Parla convierte tu texto en voz y tus audios en texto.">
+    <meta name="theme-color" content="#E8604F">
+    <link rel="icon" href="{{ url_for('static', filename='brand/favicon.svg') }}" type="image/svg+xml">
+    <link rel="icon" href="{{ url_for('static', filename='brand/favicon-32.png') }}" sizes="32x32" type="image/png">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='brand/apple-touch-icon.png') }}">
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
+    <meta name="apple-mobile-web-app-title" content="Parla">
+    <!-- Brand fonts: Fredoka (display), Nunito (text), DM Mono (figures) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@500&family=Fredoka:wght@500;600&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        // Parla brand palette mapped onto the Tailwind names the UI (and app.js) already use:
+        // blue/indigo = guayaba, slate = arena→cacao, green/emerald = nopal, amber = maíz.
+        const guayaba = {50:'#FFF3EF',100:'#FDE3DC',200:'#FAC7BB',300:'#F5A291',400:'#EF7F6C',500:'#E8604F',600:'#B13B29',700:'#962F20',800:'#7A271B',900:'#5E1F16'};
+        const nopal = {50:'#EEF7F4',100:'#DCEFEA',200:'#B5DDD3',300:'#86C8B8',400:'#5CC3B2',500:'#2F8578',600:'#256A60',700:'#1F5A51',800:'#18473F',900:'#123630'};
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        blue: guayaba,
+                        indigo: {...guayaba, 100:'#FBEFE9', 200:'#EBD3CB', 300:'#F5A291', 600:'#A33626', 700:'#8A2D20', 800:'#4D3739', 900:'#3A2629', 950:'#2A1B1D'},
+                        slate: {50:'#FFF8F3',100:'#FBEFE8',200:'#EBD5CA',300:'#DCC0B4',400:'#A88B85',500:'#7A5F5C',600:'#634B49',700:'#4D3739',800:'#3A2629',900:'#2A1B1D'},
+                        green: nopal,
+                        emerald: nopal,
+                        amber: {50:'#FEF6E4',100:'#FDF0D2',200:'#FBE0A6',300:'#F8CD75',400:'#F6C35C',500:'#F4B740',600:'#D99A1E',700:'#9A6A0A',800:'#6E4A05',900:'#4A3203'},
+                        purple: {500:'#F4B740'},
+                    },
+                    fontFamily: {
+                        sans: ['Nunito', 'ui-rounded', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
+                        display: ['Fredoka', 'Nunito', 'ui-rounded', 'system-ui', 'sans-serif'],
+                        mono: ['"DM Mono"', 'ui-monospace', 'SF Mono', 'Menlo', 'monospace'],
+                    },
+                },
+            },
+        };
+    </script>
     <!-- Phosphor Icons -->
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <meta name="csrf-token" content="{{ csrf_token }}">
 </head>
-<body class="bg-gradient-to-br from-slate-50 to-slate-200 min-h-screen text-slate-800 font-sans antialiased pb-12">
+<body class="bg-slate-50 min-h-screen text-slate-800 font-sans antialiased pb-12">
     
     <main class="container mx-auto px-4 pt-10 max-w-4xl">
         <header class="text-center mb-6">
-            <h1 class="text-4xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600 mb-2">TTS Webapp</h1>
-            <p class="text-lg text-slate-500 font-medium">Herramientas de voz inteligentes con IA</p>
+            <h1 class="flex items-center justify-center gap-3 mb-2">
+                <img src="{{ url_for('static', filename='brand/parla-mark.svg') }}" alt="" class="h-12 md:h-14 w-auto">
+                <span class="font-display font-semibold text-5xl md:text-6xl leading-none text-slate-800 tracking-tight">parla</span>
+            </h1>
+            <p class="text-lg text-slate-500 font-semibold">Tu texto, en voz alta.</p>
         </header>
 
         <!-- Tab Navigation -->
         <div class="flex justify-center mb-8 p-1.5 bg-slate-200/50 backdrop-blur-md rounded-2xl w-fit mx-auto border border-white/50">
             <button id="tab-tts" class="tab-btn px-6 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center gap-2 bg-white shadow-sm text-blue-600" data-target="content-tts">
-                <i class="ph-fill ph-speaker-high"></i> Texto a Voz
+                <i class="ph-fill ph-speaker-high"></i> Texto a voz
             </button>
             <button id="tab-stt" class="tab-btn px-6 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center gap-2 text-slate-500 hover:text-slate-700" data-target="content-stt">
-                <i class="ph ph-microphone"></i> Audio a Texto
+                <i class="ph ph-microphone"></i> Audio a texto
             </button>
         </div>
 
         <div id="content-tts" class="tab-content block animate-fade-in-up">
-            <section class="bg-white/70 backdrop-blur-lg rounded-3xl shadow-xl border border-white/50 p-6 md:p-10">
+            <section class="bg-white/70 backdrop-blur-lg rounded-[28px] shadow-[0_1px_2px_rgba(58,38,41,0.06),0_12px_32px_-12px_rgba(58,38,41,0.18)] border border-slate-200/70 p-6 md:p-10">
                 <form id="tts-form" enctype="multipart/form-data" class="space-y-8">
                     <!-- Hidden CSRF token for form-data compatibility -->
                     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
@@ -57,7 +97,7 @@
                             <div class="flex justify-between items-center mt-2 px-1">
                                 <div class="flex items-center gap-2">
                                     <span id="char-counter" class="text-sm text-slate-500 font-medium font-mono">0 caracteres</span>
-                                    <span id="char-warning" class="text-xs text-amber-500 font-semibold hidden bg-amber-50 px-2 py-1 rounded-md">
+                                    <span id="char-warning" class="text-xs text-amber-800 font-bold hidden bg-amber-100 px-2 py-1 rounded-md">
                                         <i class="ph-fill ph-warning-circle"></i> Texto muy largo (puede tardar)
                                     </span>
                                 </div>
@@ -142,7 +182,7 @@
                         <!-- Pitch -->
                         <div>
                             <div class="flex justify-between items-center mb-2">
-                                <label class="text-sm font-semibold text-slate-700">Tono (Pitch)</label>
+                                <label class="text-sm font-semibold text-slate-700">Tono</label>
                                 <span id="pitch-val" class="text-xs text-blue-600 font-mono font-bold">0Hz</span>
                             </div>
                             <input type="range" name="pitch" id="pitch" min="-20" max="20" value="0" class="w-full win10-range accent-blue-600">
@@ -151,7 +191,7 @@
                         <!-- Volume Boost -->
                         <div>
                             <div class="flex justify-between items-center mb-2">
-                                <label class="text-sm font-semibold text-slate-700">Volumen Voz</label>
+                                <label class="text-sm font-semibold text-slate-700">Volumen</label>
                                 <span id="volume-val" class="text-xs text-blue-600 font-mono font-bold">0%</span>
                             </div>
                             <input type="range" name="volume" id="volume" min="-50" max="50" value="0" class="w-full win10-range accent-blue-600">
@@ -165,16 +205,16 @@
                             <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                         </div>
                         <label for="use_ai" class="text-sm font-semibold text-slate-700 cursor-pointer select-none flex-1">
-                            <i class="ph-fill ph-magic-wand text-blue-500 mr-1"></i> Optimizar texto con IA (Claude)
-                            <span class="block text-xs font-normal text-slate-500 mt-0.5">Reescribe listas, tablas y nombres propios complejos para una lectura más fluida. (Más lento)</span>
+                            <i class="ph-fill ph-magic-wand text-blue-500 mr-1"></i> Leerlo más natural (IA)
+                            <span class="block text-xs font-normal text-slate-500 mt-0.5">Convierte tablas y listas en frases y simplifica nombres repetidos. Tarda un poco más.</span>
                         </label>
                     </div>
 
                     <!-- Action Button -->
                     <button type="submit" id="btn-submit" class="w-full group relative flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold text-lg md:text-xl py-4 px-8 rounded-2xl shadow-lg hover:shadow-xl hover:from-blue-700 hover:to-indigo-700 transition-all overflow-hidden focus:outline-none focus:ring-4 focus:ring-blue-300 active:scale-[0.98]">
                         <div class="absolute inset-0 w-1/4 h-full bg-white/20 skew-x-12 -translate-x-full group-hover:animate-shine"></div>
-                        <span id="submit-text">Transformar a Audio</span>
-                        <i id="submit-icon" class="ph-fill ph-magic-wand text-2xl"></i>
+                        <span id="submit-text">Escuchar</span>
+                        <i id="submit-icon" class="ph-fill ph-play-circle text-2xl"></i>
                         <i id="submit-spinner" class="ph ph-spinner-gap animate-spin text-2xl hidden"></i>
                     </button>
                     
@@ -190,8 +230,8 @@
                     <div class="absolute top-0 right-0 w-64 h-64 bg-blue-500 rounded-full mix-blend-screen filter blur-[80px] opacity-20 pointer-events-none"></div>
                     <div class="absolute bottom-0 left-0 w-48 h-48 bg-purple-500 rounded-full mix-blend-screen filter blur-[60px] opacity-20 pointer-events-none"></div>
                     
-                    <h3 class="text-xl font-bold mb-6 flex items-center gap-2 relative z-10 text-indigo-100">
-                        <i class="ph-fill ph-headphones text-blue-400"></i> Tu Audio está listo
+                    <h3 class="font-display text-2xl font-semibold mb-6 flex items-center gap-2 relative z-10 text-indigo-100">
+                        <i class="ph-fill ph-headphones text-blue-400"></i> Tu audio está listo
                     </h3>
                     
                     <audio id="native-audio" preload="metadata"></audio>
@@ -246,7 +286,7 @@
 
         <!-- Audio to Text Section -->
         <div id="content-stt" class="tab-content hidden animate-fade-in-up">
-            <section class="bg-white/70 backdrop-blur-lg rounded-3xl shadow-xl border border-white/50 p-6 md:p-10">
+            <section class="bg-white/70 backdrop-blur-lg rounded-[28px] shadow-[0_1px_2px_rgba(58,38,41,0.06),0_12px_32px_-12px_rgba(58,38,41,0.18)] border border-slate-200/70 p-6 md:p-10">
                 <div class="space-y-8">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <!-- Record Card -->
@@ -267,7 +307,7 @@
                                 <button id="btn-stop" class="hidden px-4 py-2 bg-slate-800 text-white rounded-xl text-sm font-bold hover:bg-slate-900 transition-all flex items-center gap-2">
                                     <i class="ph-fill ph-stop"></i> Detener
                                 </button>
-                                <button id="btn-pause" class="hidden px-4 py-2 bg-amber-500 text-white rounded-xl text-sm font-bold hover:bg-amber-600 transition-all flex items-center gap-2">
+                                <button id="btn-pause" class="hidden px-4 py-2 bg-amber-500 text-slate-800 rounded-xl text-sm font-bold hover:bg-amber-400 transition-all flex items-center gap-2">
                                     <i class="ph-fill ph-pause"></i> Pausar
                                 </button>
                                 <button id="btn-resume" class="hidden px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700 transition-all flex items-center gap-2">
@@ -346,7 +386,7 @@
                     </div>
 
                     <button id="btn-transcribe" disabled class="w-full relative flex items-center justify-center gap-2 bg-slate-200 text-slate-400 font-bold text-lg py-4 px-8 rounded-2xl shadow-sm transition-all focus:outline-none overflow-hidden active:scale-[0.98]">
-                        <span id="transcribe-text">Transcribir a Texto</span>
+                        <span id="transcribe-text">Transcribir</span>
                         <i id="transcribe-icon" class="ph ph-waveform text-2xl"></i>
                         <i id="transcribe-spinner" class="ph ph-spinner-gap animate-spin text-2xl hidden"></i>
                     </button>

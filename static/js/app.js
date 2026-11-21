@@ -182,7 +182,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Set Loading State
         btnSubmit.disabled = true;
-        submitText.textContent = "Procesando...";
+        submitText.textContent = "Preparando tu audio…";
         submitIcon.classList.add('hidden');
         submitSpinner.classList.remove('hidden');
         
@@ -254,7 +254,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } finally {
             // Restore Submit Button
             btnSubmit.disabled = false;
-            submitText.textContent = "Transformar a Audio";
+            submitText.textContent = "Escuchar";
             submitSpinner.classList.add('hidden');
             submitIcon.classList.remove('hidden');
         }
@@ -407,7 +407,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // El enlace local o URL real
         const currentUrl = window.location.origin;
         // The downloaded MP3 must be shared, or the current website URL
-        const text = encodeURIComponent(`Escucha este audio generado automáticamente con TTS Webapp: ¡Descárgalo o compártelo!`);
+        const text = encodeURIComponent(`Te paso este audio, hecho con Parla.`);
         window.open(`https://wa.me/?text=${text} ${currentUrl}`, '_blank');
     });
 
@@ -1033,7 +1033,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         btnTranscribe.disabled = true;
-        transcribeText.textContent = "Transcribiendo con AI...";
+        transcribeText.textContent = "Transcribiendo…";
         transcribeIcon.classList.add('hidden');
         transcribeSpinner.classList.remove('hidden');
         
@@ -1065,7 +1065,7 @@ document.addEventListener('DOMContentLoaded', () => {
             setSttStatus(err.message, "error");
         } finally {
             btnTranscribe.disabled = false;
-            transcribeText.textContent = "Transcribir a Texto";
+            transcribeText.textContent = "Transcribir";
             transcribeSpinner.classList.add('hidden');
             transcribeIcon.classList.remove('hidden');
         }

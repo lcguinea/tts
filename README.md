@@ -1,4 +1,8 @@
-# TTS & STT Webapp (Premium AI Toolbox)
+# Parla
+
+*Tu texto, en voz alta.* (Antes «TTS & STT Webapp».)
+
+**Marca:** símbolo y favicons en `static/brand/`, manifiesto en `static/manifest.webmanifest`. Colores Parla (guayaba `#E8604F`, guayaba-tinta `#B13B29`, arena `#FFF8F3`, cacao `#3A2629`, maíz `#F4B740`, nopal `#256A60`) mapeados sobre los nombres de Tailwind en `templates/index.html` (blue/indigo = guayaba, slate = arena→cacao, green = nopal, amber = maíz). Tipografías: Fredoka (titulares), Nunito (texto), DM Mono (cifras). Manual de marca completo: https://claude.ai/artifact/H6AT6aSHC1UG2xnzmXpy3P
 
 Una WebApp Full-Stack construida en **Python 3.11 + Flask** que ofrece herramientas de voz inteligentes:
 - **Texto a Voz (TTS)**: Convierte texto a audio con voces premium usando `edge-tts`.

@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#E8604F"/>
+  <g transform="translate(256 256) scale(0.78) translate(-256 -256) translate(-19 -20)">
+  <!-- P = speech bubble: round bowl + stem that ends like a bubble tail -->
+  <path fill="#FFF7F2" d="M150 112h126c80 0 144 62 144 140s-64 140-144 140h-50v34c0 14-16 22-27 13l-60-50c-6-5-9-12-9-20V132c0-11 9-20 20-20z"/>
+  <!-- sound wave inside the bowl -->
+  <g fill="#E8604F">
+    <rect x="232" y="214" width="26" height="76" rx="13"/>
+    <rect x="276" y="180" width="26" height="144" rx="13"/>
+    <rect x="320" y="222" width="26" height="60" rx="13"/>
+  </g>
+  </g>
+</svg>

@@ -1,8 +1,7 @@
 /* Base Styles & Utilities */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 body {
-    font-family: 'Inter', sans-serif;
+    font-family: 'Nunito', ui-rounded, system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
 }
 
@@ -37,8 +36,8 @@ body {
 
 /* Custom Styling for Drag & Drop Zone */
 #dropzone.drag-active {
-    border-color: #3b82f6; /* Tailwind blue-500 */
-    background-color: #eff6ff; /* Tailwind blue-50 */
+    border-color: #E8604F; /* Parla guayaba */
+    background-color: #FFF3EF; /* Parla guayaba-50 */
     transform: scale(1.02);
 }
 
@@ -48,7 +47,7 @@ body {
     appearance: none;
     width: 100%;
     height: 6px;
-    background: #e2e8f0;
+    background: #EBD5CA;
     border-radius: 9999px;
     outline: none;
     transition: background 0.2s;
@@ -60,7 +59,7 @@ body {
     width: 18px;
     height: 18px;
     border-radius: 50%;
-    background: #3b82f6;
+    background: #B13B29;
     cursor: pointer;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     transition: transform 0.1s, background 0.2s;
@@ -68,7 +67,7 @@ body {
 
 .win10-range::-webkit-slider-thumb:hover {
     transform: scale(1.15);
-    background: #2563eb;
+    background: #962F20;
 }
 
 .win10-range::-webkit-slider-thumb:active {
@@ -80,7 +79,7 @@ body {
     height: 18px;
     border: none;
     border-radius: 50%;
-    background: #3b82f6;
+    background: #B13B29;
     cursor: pointer;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     transition: transform 0.1s, background 0.2s;
@@ -88,10 +87,20 @@ body {
 
 .win10-range::-moz-range-thumb:hover {
     transform: scale(1.15);
-    background: #2563eb;
+    background: #962F20;
 }
 
 /* Player Progress UI Tweaks */
 #progress-container {
     padding: 10px 0;
+}
+
+/* Parla: visible keyboard focus in brand coral */
+:focus-visible {
+    outline: 2px solid #E8604F;
+    outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .animate-shine, .animate-fade-in-up { animation: none; }
 }
