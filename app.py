@@ -220,6 +220,18 @@ def estimate_cost():
     return jsonify(quote)
 
 
+
+# TEMPORARY (21-11-2026): read-only listing of the Gemini voice library to pick
+# regional Spanish voices. Exposes no secret. Remove once voices are chosen.
+@app.route('/api/_gemini-voices', methods=['GET'])
+@limiter.limit("10 per minute")
+def _gemini_voice_library():
+    import requests as _rq
+    params = {k: v for k, v in request.args.items() if k in ('language_code', 'region_code', 'accent', 'pageSize', 'pageToken', 'page_size', 'page_token')}
+    r = _rq.get('https://generativelanguage.googleapis.com/v1beta/voices', params=params,
+                headers={'x-goog-api-key': app.config.get('GOOGLE_API_KEY') or ''}, timeout=30)
+    return app.response_class(r.text, status=r.status_code, mimetype='application/json')
+
 @app.route('/api/generate', methods=['POST'])
 @limiter.limit("10 per minute")
 def generate_audio():
