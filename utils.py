@@ -322,7 +322,7 @@ def load_tts_dictionary():
         logger.warning(f"No se pudo cargar tts_dictionary.json: {e}")
         return {}
 
-def optimize_text_for_tts(text, use_ai=False, openai_client=None):
+def optimize_text_for_tts(text, use_ai=False, ai_client=None, model="claude-haiku-5-5"):
     logger = logging.getLogger(__name__)
     
     # 1. Base local cleaning (always applied)
@@ -334,24 +334,30 @@ def optimize_text_for_tts(text, use_ai=False, openai_client=None):
     for key, value in tts_dict.items():
         text = re.sub(rf'\b{re.escape(key)}\b', value, text)
         
-    # 2. AI Optimization if requested
-    if use_ai and openai_client:
-        logger.info("Running AI optimization for TTS...")
+    # 2. AI Optimization with Claude if requested
+    if use_ai and ai_client:
+        logger.info(f"Running AI optimization for TTS with {model}...")
         try:
-            prompt = (
-                "Reescribe el siguiente texto para que sea leído en voz alta por un sistema TTS "
-                "(Text-to-Speech). Convierte las tablas o listas complejas en un formato narrativo lineal, "
-                "elimina cualquier elemento visual, símbolos extraños, y acorta nombres propios repetitivos si "
-                "aparecen muchas veces. Devuelve SOLO el texto optimizado, sin introducciones.\n\n"
-                f"Texto original:\n{text}"
+            system = (
+                "Reescribes textos para que los lea en voz alta un sistema TTS (Text-to-Speech). "
+                "Convierte las tablas o listas complejas en un formato narrativo lineal, "
+                "elimina cualquier elemento visual y símbolos extraños, y acorta nombres propios "
+                "repetitivos si aparecen muchas veces. Conserva el idioma y todo el contenido. "
+                "Devuelve SOLO el texto optimizado, sin introducciones ni comentarios."
             )
-            response = openai_client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0.3
-            )
-            ai_text = response.choices[0].message.content.strip()
-            if ai_text:
+            # Streaming avoids HTTP timeouts on long documents.
+            with ai_client.messages.stream(
+                model=model,
+                max_tokens=64000,
+                system=system,
+                messages=[{"role": "user", "content": f"<texto>\n{text}\n</texto>"}],
+                output_config={"effort": "low"},
+            ) as stream:
+                response = stream.get_final_message()
+            ai_text = "".join(b.text for b in response.content if b.type == "text").strip()
+            if response.stop_reason == "max_tokens":
+                logger.warning("AI optimization truncated (max_tokens); keeping local cleaning.")
+            elif ai_text:
                 text = ai_text
                 logger.info("AI optimization successful.")
         except Exception as e:

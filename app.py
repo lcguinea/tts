@@ -26,6 +26,7 @@ from voices import (
 from utils import extract_text_from_file, generate_mp3_sync, is_transient_tts_error, cleanup_old_files, get_audio_duration, split_audio_ffmpeg, deduplicate_text, optimize_text_for_tts
 import logging
 from openai import OpenAI
+import anthropic
 from werkzeug.exceptions import HTTPException
 import subprocess
 from edge_tts.exceptions import NoAudioReceived
@@ -37,6 +38,14 @@ def get_openai_client():
     if client is None:
         client = OpenAI(api_key=Config.OPENAI_API_KEY)
     return client
+
+# Anthropic client for the "optimize text with AI" step
+anthropic_client = None
+def get_anthropic_client():
+    global anthropic_client
+    if anthropic_client is None and Config.ANTHROPIC_API_KEY:
+        anthropic_client = anthropic.Anthropic(api_key=Config.ANTHROPIC_API_KEY)
+    return anthropic_client
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -138,18 +147,16 @@ def generate_audio():
     # AI optimization is optional: without an API key (or if the client cannot be
     # created) we fall back to local cleaning instead of failing the whole request.
     use_ai = request.form.get('use_ai') == 'true'
-    openai_client_instance = None
+    ai_client = None
     if use_ai:
-        if not app.config.get('OPENAI_API_KEY'):
-            logger.warning("AI optimization requested but OPENAI_API_KEY is not configured. Using local cleaning only.")
-            use_ai = False
-        else:
-            try:
-                openai_client_instance = get_openai_client()
-            except Exception as e:
-                logger.error(f"Could not create OpenAI client: {e}. Using local cleaning only.")
-                use_ai = False
-    final_text = optimize_text_for_tts(final_text, use_ai=use_ai, openai_client=openai_client_instance)
+        try:
+            ai_client = get_anthropic_client()
+        except Exception as e:
+            logger.error(f"Could not create Anthropic client: {e}. Using local cleaning only.")
+    if use_ai and ai_client is None:
+        logger.warning("use_ai requested but ANTHROPIC_API_KEY is not configured; using local cleaning only.")
+    final_text = optimize_text_for_tts(final_text, use_ai=use_ai, ai_client=ai_client,
+                                       model=app.config.get('ANTHROPIC_MODEL'))
 
     if not final_text.strip():
         logger.warning("Text is empty after TTS optimization.")

@@ -34,7 +34,11 @@ class Config:
     SESSION_REFRESH_EACH_REQUEST = True
     PERMANENT_SESSION_LIFETIME = 3600 # 1 hour
 
-    # Transcription Settings (OpenAI API)
+    # Text optimization with Claude (Anthropic API)
+    ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY')
+    ANTHROPIC_MODEL = os.environ.get('ANTHROPIC_MODEL', 'claude-haiku-5-5')
+
+    # Transcription Settings (OpenAI API; Anthropic has no speech-to-text)
     OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
     OPENAI_TRANSCRIBE_MODEL = os.environ.get('OPENAI_TRANSCRIBE_MODEL', 'gpt-4o-mini-transcribe')
 
