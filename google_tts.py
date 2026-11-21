@@ -107,6 +107,17 @@ def build_audio_config(voice, rate, pitch, volume):
     return config
 
 
+def _google_reason(resp):
+    """Short reason from a Google error body, e.g. 'PERMISSION_DENIED (API_KEY_INVALID)'."""
+    try:
+        err = resp.json().get("error", {})
+    except ValueError:
+        return f"HTTP {resp.status_code}"
+    reasons = [d.get("reason") for d in err.get("details", []) if isinstance(d, dict) and d.get("reason")]
+    status = err.get("status") or f"HTTP {resp.status_code}"
+    return f"{status} ({', '.join(reasons)})" if reasons else f"{status}: {err.get('message', '')[:160]}"
+
+
 def _synthesize_chunk(text, voice, audio_config, api_key):
     body = {
         "input": {"text": text},
@@ -129,12 +140,16 @@ def _synthesize_chunk(text, voice, audio_config, api_key):
     if resp.status_code != 200:
         detail = resp.text[:500]
         logger.error(f"Google TTS HTTP {resp.status_code} for {voice['id']}: {detail}")
+        reason = _google_reason(resp)
         if resp.status_code in (401, 403):
+            if "API_KEY_SERVICE_BLOCKED" in detail or "are blocked" in detail:
+                raise GoogleTTSError("Tu clave de Google no tiene permiso para Text-to-Speech (está restringida a otras APIs, p. ej. Gemini). "
+                                     "Añade «Cloud Text-to-Speech API» a sus restricciones o crea una clave nueva.", 502)
             if "SERVICE_DISABLED" in detail or "has not been used" in detail:
                 raise GoogleTTSError("La API de Text-to-Speech no está activada en tu proyecto de Google Cloud.", 502)
             if "BILLING" in detail.upper():
                 raise GoogleTTSError("Tu proyecto de Google Cloud no tiene la facturación activada.", 502)
-            raise GoogleTTSError("Google ha rechazado la clave (GOOGLE_API_KEY). Revisa que sea válida y que permita Text-to-Speech.", 502)
+            raise GoogleTTSError(f"Google ha rechazado la clave (GOOGLE_API_KEY): {reason}", 502)
         if resp.status_code == 429:
             raise GoogleTTSError("Google ha limitado las peticiones. Espera un minuto y vuelve a probar.", 429)
         if resp.status_code == 400:
