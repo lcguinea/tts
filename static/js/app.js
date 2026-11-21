@@ -184,7 +184,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const opt = voiceSelectEl.selectedOptions[0];
         return {
             id: opt.value,
-            premium: opt.dataset.provider === 'google',
+            premium: opt.dataset.provider === 'gemini',
             price: parseFloat(opt.dataset.price || '0'),
             tier: opt.dataset.tier || '',
             free: parseInt(opt.dataset.free || '0', 10),
@@ -200,8 +200,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         const chars = textContent.value.length;
         const text = chars
-            ? `Voz premium (${v.tier}): unos ${formatUsd(chars * v.price / 1e6)} por ${formatInt(chars)} caracteres. Te diré el precio exacto antes de generar.`
-            : `Voz premium (${v.tier}): ${v.price} $ por millón de caracteres. Te diré el precio exacto antes de generar.`;
+            ? `Voz premium de Gemini: unos ${formatUsd(chars * v.price / 1e6)} para este texto (${formatInt(chars)} caracteres). Te diré el precio antes de generar.`
+            : `Voz premium de Gemini: unos ${v.price} $ por millón de caracteres. Te diré el precio antes de generar.`;
         costHint.className = 'mt-2 text-xs font-semibold text-amber-800 flex items-start gap-1';
         costHint.innerHTML = '<i class="ph-fill ph-coins mt-0.5"></i> <span></span>';
         costHint.querySelector('span').textContent = text;
@@ -215,10 +215,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function showQuote(q) {
         pendingQuote = q;
-        costAmount.textContent = formatUsd(q.cost_usd);
-        costDetail.textContent = `${formatInt(q.chars)} caracteres × ${q.price_per_million} $ por millón (voz ${q.tier_name} de Google).`;
-        costFree.textContent = `Google regala ${formatInt(q.free_chars_per_month)} caracteres al mes en voces ${q.tier_name}. Si este mes no los has gastado, este audio te saldrá gratis.`;
-        btnCostAcceptText.textContent = `Generar por ${formatUsd(q.cost_usd)}`;
+        costAmount.textContent = `unos ${formatUsd(q.cost_usd)}`;
+        costDetail.textContent = `${formatInt(q.chars)} caracteres, unos ${formatInt(q.seconds)} s de audio. Gemini cobra por el audio que genera (${q.price_output_per_million} $ por millón de tokens de audio, 25 por segundo), así que es una estimación: el coste real te lo digo al terminar.`;
+        costFree.textContent = 'Si tu clave de Google AI Studio está en el plan gratuito, no te cobrarán nada (tiene límites de uso diarios).';
+        btnCostAcceptText.textContent = `Generar (≈ ${formatUsd(q.cost_usd)})`;
         btnSubmit.classList.add('hidden');
         costConfirm.classList.remove('hidden');
         btnCostAccept.focus();
@@ -342,7 +342,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             // Success
-            setStatus(data.premium ? `Tu audio está listo. Coste: ${formatUsd(data.cost_usd)} (${formatInt(data.billed_chars)} caracteres).` : "Tu audio está listo.", "success");
+            setStatus(data.premium && data.usage ? `Tu audio está listo. Coste real: ${formatUsd(data.cost_usd)} (${formatInt(Math.round(data.usage.seconds))} s de audio).` : "Tu audio está listo.", "success");
             
             // Setup Player
             // For WebKit (iOS), explicitly calling .load() after setting .src is more reliable

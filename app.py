@@ -25,8 +25,9 @@ from voices import (
     is_premium as is_premium_voice,
     VOICES_BY_ID,
 )
-import google_tts
-from google_tts import GoogleTTSError
+import gemini_tts
+from gemini_tts import GeminiTTSError
+from voices import GEMINI_MODEL
 from utils import extract_text_from_file, generate_mp3_sync, is_transient_tts_error, cleanup_old_files, get_audio_duration, split_audio_ffmpeg, deduplicate_text, optimize_text_for_tts
 import logging
 from openai import OpenAI
@@ -175,29 +176,27 @@ def _remove_quietly(path):
 
 
 def render_voice(text, voice_id, rate, pitch, volume, output_path):
-    """Synthesize with the provider of the catalog voice. Returns billed chars
-    (0 for the free Microsoft voices)."""
+    """Synthesize with the provider of the catalog voice. Returns the usage of
+    a premium (Gemini) voice, or None for the free Microsoft voices."""
     voice = VOICES_BY_ID[voice_id]
-    if voice['provider'] == 'google':
-        return google_tts.synthesize_to_mp3(text, voice, rate, pitch, volume, output_path,
-                                            app.config.get('GOOGLE_API_KEY'))
+    if voice['provider'] == 'gemini':
+        return gemini_tts.synthesize_to_mp3(text, voice, rate, volume, output_path,
+                                            app.config.get('GOOGLE_API_KEY'), model=GEMINI_MODEL)
     generate_mp3_sync(text, voice_id, rate, pitch, volume, output_path)
-    return 0
+    return None
 
 
 def premium_quote(text, voice_id):
     voice = VOICES_BY_ID[voice_id]
-    chars = sum(google_tts.billable_characters(c) for c in google_tts.split_text_by_bytes(text))
-    price = voice['price_per_million']
-    return {
+    quote = gemini_tts.estimate(text, GEMINI_MODEL)
+    quote.update({
         'voice': voice_id,
         'voice_label': voice['label'],
         'tier_name': voice['tier_name'],
-        'chars': chars,
-        'price_per_million': price,
-        'cost_usd': round(chars * price / 1_000_000, 6),
-        'free_chars_per_month': voice['free_chars_per_month'],
-    }
+        'model': GEMINI_MODEL,
+        'estimate': True,
+    })
+    return quote
 
 
 @app.route('/api/estimate', methods=['POST'])
@@ -217,7 +216,7 @@ def estimate_cost():
         return error
     quote = premium_quote(final_text, voice)
     quote.update({'success': True, 'prepared_text': final_text})
-    logger.info(f"Estimate: voice={voice} chars={quote['chars']} cost=${quote['cost_usd']}")
+    logger.info(f"Estimate: voice={voice} chars={quote['chars']} est_cost=${quote['cost_usd']}")
     return jsonify(quote)
 
 
@@ -278,13 +277,13 @@ def generate_audio():
     if premium and request.form.get('prepared') != 'true':
         # Premium voices cost money: only generate text the user saw quoted.
         return jsonify({'error': 'Antes de generar con una voz premium, pide el presupuesto.'}), 400
-    billed_chars = 0
+    usage = None
     start_gen_time = time.time()
     try:
-        billed_chars = render_voice(final_text, voice, rate, pitch, volume, output_path)
+        usage = render_voice(final_text, voice, rate, pitch, volume, output_path)
         total_gen_time = time.time() - start_gen_time
         logger.info(f"Generation complete. Duration: {total_gen_time:.2f}s for {len(final_text)} chars.")
-    except GoogleTTSError as e:
+    except GeminiTTSError as e:
         _remove_quietly(output_path)
         return jsonify({'error': e.user_message}), e.status
     except Exception as e:
@@ -310,8 +309,8 @@ def generate_audio():
         'download_url': download_url,
         'filename': output_filename,
         'premium': premium,
-        'billed_chars': billed_chars,
-        'cost_usd': round(billed_chars * VOICES_BY_ID[voice]['price_per_million'] / 1_000_000, 6) if premium else 0,
+        'usage': usage,
+        'cost_usd': usage['cost_usd'] if usage else 0,
     })
 
 @app.route('/api/transcribe', methods=['POST'])
@@ -588,6 +587,8 @@ def voice_preview():
                         except OSError:
                             pass
                     logger.error(f"Preview generation failed for {voice}: {e}")
+                    if isinstance(e, GeminiTTSError):
+                        return jsonify({'error': e.user_message}), e.status
                     return jsonify({'error': 'No se pudo generar la muestra de voz.'}), 500
 
     return jsonify({

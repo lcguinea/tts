@@ -112,64 +112,48 @@ VOICE_GROUPS = [
 ]
 
 # --------------------------------------------------------------------------
-# Voces PREMIUM (Google Cloud Text-to-Speech, con coste por carácter)
+# Voces PREMIUM (Gemini TTS con la clave de Google AI Studio, con coste)
 # --------------------------------------------------------------------------
-# Precios oficiales en USD por millón de caracteres y tramo gratuito mensual
-# por tipo de voz, según https://cloud.google.com/text-to-speech/pricing
-# (consultado el 21-11-2026). Si Google los cambia, actualizar SOLO aquí.
-GOOGLE_TIERS = {
-    "chirp3-hd": {"label": "HD", "name": "Chirp 3 HD", "price_per_million": 30.0, "free_chars_per_month": 1_000_000},
-    "neural2": {"label": "Neural", "name": "Neural2", "price_per_million": 16.0, "free_chars_per_month": 1_000_000},
-    "studio": {"label": "Estudio", "name": "Studio", "price_per_million": 160.0, "free_chars_per_month": 1_000_000},
-}
+# Gemini detecta el idioma solo: con texto en español, hablan español.
+# Precios y modelo en gemini_tts.py (PRICING, DEFAULT_MODEL).
+import os as _os
+import gemini_tts as _gemini
+
+GEMINI_MODEL = _os.environ.get("GEMINI_TTS_MODEL", _gemini.DEFAULT_MODEL)
+# Coste estimado por millón de caracteres, solo para la pista del selector.
+GEMINI_PRICE_PER_MILLION_CHARS = round(_gemini.estimate("x" * 1_000_000, GEMINI_MODEL)["cost_usd"], 1)
 
 
-def _google_voice(voice_id, name, country, flag, gender, tier, language_code):
-    t = GOOGLE_TIERS[tier]
+def _gemini_voice(voice_name, descriptor, gender):
     return {
-        "id": voice_id,
-        "name": name,
-        "country": country,
-        "flag": flag,
+        "id": f"gemini-{voice_name}",
+        "name": voice_name,
+        "descriptor": descriptor,
+        "country": "Gemini",
+        "flag": "⭐",
         "gender": gender,
-        "provider": "google",
-        "tier": tier,
-        "tier_label": t["label"],
-        "tier_name": t["name"],
-        "price_per_million": t["price_per_million"],
-        "free_chars_per_month": t["free_chars_per_month"],
-        "language_code": language_code,
-        # Studio and Chirp 3 HD reject the pitch parameter.
-        "supports_pitch": tier == "neural2",
+        "provider": "gemini",
+        "voice_name": voice_name,
+        "tier_name": "Gemini TTS",
+        "price_per_million": GEMINI_PRICE_PER_MILLION_CHARS,
     }
 
 
 PREMIUM_VOICE_GROUPS = [
     {
-        "id": "premium-es-ES",
-        "label": "Premium · España (con coste)",
+        "id": "premium-gemini",
+        "label": f"Premium · Gemini (con coste, ≈ {GEMINI_PRICE_PER_MILLION_CHARS:g} $ por millón de caracteres)",
         "flag": "⭐",
         "premium": True,
         "voices": [
-            _google_voice("es-ES-Chirp3-HD-Aoede", "Aoede", "España", "🇪🇸", "femenina", "chirp3-hd", "es-ES"),
-            _google_voice("es-ES-Chirp3-HD-Charon", "Charon", "España", "🇪🇸", "masculina", "chirp3-hd", "es-ES"),
-            _google_voice("es-ES-Neural2-A", "Lucía", "España", "🇪🇸", "femenina", "neural2", "es-ES"),
-            _google_voice("es-ES-Neural2-F", "Mateo", "España", "🇪🇸", "masculina", "neural2", "es-ES"),
-            _google_voice("es-ES-Studio-C", "Carmen", "España", "🇪🇸", "femenina", "studio", "es-ES"),
-            _google_voice("es-ES-Studio-F", "Pablo", "España", "🇪🇸", "masculina", "studio", "es-ES"),
-        ],
-    },
-    {
-        "id": "premium-es-US",
-        "label": "Premium · Latinoamérica (con coste)",
-        "flag": "⭐",
-        "premium": True,
-        "voices": [
-            _google_voice("es-US-Chirp3-HD-Kore", "Kore", "Latinoamérica", "🌎", "femenina", "chirp3-hd", "es-US"),
-            _google_voice("es-US-Chirp3-HD-Puck", "Puck", "Latinoamérica", "🌎", "masculina", "chirp3-hd", "es-US"),
-            _google_voice("es-US-Neural2-A", "Valeria", "Latinoamérica", "🌎", "femenina", "neural2", "es-US"),
-            _google_voice("es-US-Neural2-B", "Diego", "Latinoamérica", "🌎", "masculina", "neural2", "es-US"),
-            _google_voice("es-US-Studio-B", "Andrés", "Latinoamérica", "🌎", "masculina", "studio", "es-US"),
+            _gemini_voice("Sulafat", "cálida", "femenina"),
+            _gemini_voice("Kore", "firme", "femenina"),
+            _gemini_voice("Aoede", "desenfadada", "femenina"),
+            _gemini_voice("Leda", "juvenil", "femenina"),
+            _gemini_voice("Achird", "cercana", "masculina"),
+            _gemini_voice("Charon", "informativa", "masculina"),
+            _gemini_voice("Puck", "alegre", "masculina"),
+            _gemini_voice("Algenib", "grave", "masculina"),
         ],
     },
 ]
@@ -192,9 +176,8 @@ def _build_label(group, voice):
     """Etiqueta visible: bandera + nombre amigable (+ país si el grupo agrupa
     varios países o si el país forma parte del formato acordado). Nunca
     contiene el identificador técnico de la voz."""
-    if voice.get("provider") == "google":
-        return "{flag} {name} · {tier_label} · {price:g} $/millón".format(
-            price=voice["price_per_million"], **voice)
+    if voice.get("provider") == "gemini":
+        return "{flag} {name} · {descriptor} · {gender}".format(**voice)
     if group["id"] == "latam":
         return "{flag} {name} · {country}".format(**voice)
     if group["id"] == "es-MX":
@@ -217,7 +200,7 @@ VOICES_BY_ID = {voice["id"]: voice for voice in ALL_VOICES}
 
 def is_premium(voice_id):
     voice = VOICES_BY_ID.get(voice_id)
-    return bool(voice and voice["provider"] == "google")
+    return bool(voice and voice["provider"] == "gemini")
 
 
 def is_allowed(voice_id):
