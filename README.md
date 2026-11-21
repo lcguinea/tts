@@ -4,6 +4,8 @@
 
 **Voces premium (Gemini TTS):** grupo «⭐ Premium · Gemini» del selector, con la clave de Google AI Studio en `GOOGLE_API_KEY` (la API de Google Cloud TTS no acepta esas claves). Modelo `GEMINI_TTS_MODEL` (por defecto gemini-3.8-flash-tts, con reserva gemini-2.5-flash-preview-tts); precios en `gemini_tts.py` → `PRICING` (los de 3.8 se duplican el 01-01-2027). Gemini cobra por audio generado (25 tokens/s), así que `/api/estimate` da una estimación (14 caracteres/s) y `/api/generate` devuelve el coste real (`usage`). Solo genera voces premium con `prepared=true` (texto presupuestado). Audio PCM 24 kHz → MP3 con `lameenc`; velocidad con ffmpeg `atempo` si existe; el tono no se aplica.
 
+**Muestras de voz fijas:** `static/previews/<id de voz>.mp3` (22, generadas el 21-11-2026 con el texto de `voices.PREVIEW_TEXT`). `/api/voice-preview` las sirve sin llamar a ningún servicio; una voz premium sin muestra fija devuelve 404 en vez de generarla. Al añadir una voz, añade su MP3. Las voces premium son voces regionales de la biblioteca de Gemini (`GET /v1beta/voices?language_code=es-ES|es-419`), con el acento que declara Google.
+
 **Marca:** símbolo y favicons en `static/brand/`, manifiesto en `static/manifest.webmanifest`. Colores Parla (guayaba `#E8604F`, guayaba-tinta `#B13B29`, arena `#FFF8F3`, cacao `#3A2629`, maíz `#F4B740`, nopal `#256A60`) mapeados sobre los nombres de Tailwind en `templates/index.html` (blue/indigo = guayaba, slate = arena→cacao, green = nopal, amber = maíz). Tipografías: Fredoka (titulares), Nunito (texto), DM Mono (cifras). Manual de marca completo: https://claude.ai/artifact/H6AT6aSHC1UG2xnzmXpy3P
 
 Una WebApp Full-Stack construida en **Python 3.11 + Flask** que ofrece herramientas de voz inteligentes:

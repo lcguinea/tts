@@ -221,17 +221,6 @@ def estimate_cost():
 
 
 
-# TEMPORARY (21-11-2026): read-only listing of the Gemini voice library to pick
-# regional Spanish voices. Exposes no secret. Remove once voices are chosen.
-@app.route('/api/_gemini-voices', methods=['GET'])
-@limiter.limit("10 per minute")
-def _gemini_voice_library():
-    import requests as _rq
-    params = {k: v for k, v in request.args.items() if k in ('language_code', 'region_code', 'accent', 'pageSize', 'pageToken', 'page_size', 'page_token')}
-    r = _rq.get('https://generativelanguage.googleapis.com/v1beta/voices', params=params,
-                headers={'x-goog-api-key': app.config.get('GOOGLE_API_KEY') or ''}, timeout=30)
-    return app.response_class(r.text, status=r.status_code, mimetype='application/json')
-
 @app.route('/api/generate', methods=['POST'])
 @limiter.limit("10 per minute")
 def generate_audio():
@@ -563,6 +552,20 @@ def voice_preview():
     if not is_allowed_voice(voice):
         logger.warning(f"Preview rejected for voice outside catalog: {voice!r}")
         return jsonify({'error': 'Voz no disponible.'}), 400
+
+    # Fixed samples committed in static/previews/<voice>.mp3: serving them costs
+    # nothing (premium voices would otherwise bill Gemini on every cache miss).
+    static_name = f'previews/{voice}.mp3'
+    if os.path.exists(os.path.join(app.static_folder, static_name)):
+        return jsonify({
+            'success': True,
+            'voice': voice,
+            'cached': True,
+            'audio_url': url_for('static', filename=static_name),
+        })
+    if is_premium_voice(voice):
+        logger.error(f"Missing fixed preview for premium voice {voice}; not generating (it would cost).")
+        return jsonify({'error': 'Esta voz todavía no tiene muestra.'}), 404
 
     preview_folder = app.config['PREVIEW_FOLDER']
     os.makedirs(preview_folder, exist_ok=True)
