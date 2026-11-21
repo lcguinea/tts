@@ -201,7 +201,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const chars = textContent.value.length;
         const text = chars
             ? `Voz premium de Gemini: unos ${formatUsd(chars * v.price / 1e6)} para este texto (${formatInt(chars)} caracteres). Te diré el precio antes de generar.`
-            : `Voz premium de Gemini: unos ${v.price} $ por millón de caracteres. Te diré el precio antes de generar.`;
+            : `Voz premium de Gemini: unos ${v.price.toLocaleString('es-ES')} $ por millón de caracteres. Te diré el precio antes de generar.`;
         costHint.className = 'mt-2 text-xs font-semibold text-amber-800 flex items-start gap-1';
         costHint.innerHTML = '<i class="ph-fill ph-coins mt-0.5"></i> <span></span>';
         costHint.querySelector('span').textContent = text;

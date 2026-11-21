@@ -124,36 +124,67 @@ GEMINI_MODEL = _os.environ.get("GEMINI_TTS_MODEL", _gemini.DEFAULT_MODEL)
 GEMINI_PRICE_PER_MILLION_CHARS = round(_gemini.estimate("x" * 1_000_000, GEMINI_MODEL)["cost_usd"], 1)
 
 
-def _gemini_voice(voice_name, descriptor, gender):
+def _gemini_voice(library_id, name, descriptor, gender, country, flag, accent):
+    """A regional voice from the Gemini voice library (GET /v1beta/voices),
+    whose `accent` field is declared by Google (e.g. "Castilian Spanish")."""
     return {
-        "id": f"gemini-{voice_name}",
-        "name": voice_name,
+        "id": f"gemini-{library_id}",
+        "name": name,
         "descriptor": descriptor,
-        "country": "Gemini",
-        "flag": "⭐",
+        "country": country,
+        "flag": flag,
         "gender": gender,
+        "accent": accent,
         "provider": "gemini",
-        "voice_name": voice_name,
+        "voice_name": library_id,
         "tier_name": "Gemini TTS",
         "price_per_million": GEMINI_PRICE_PER_MILLION_CHARS,
     }
 
 
+_PREMIUM_SUFFIX = "(con coste, ≈ {} $ por millón de caracteres)".format(
+    f"{GEMINI_PRICE_PER_MILLION_CHARS:g}".replace(".", ","))
+
+# Voces elegidas el 21-11-2026 de la biblioteca de Gemini (filtros
+# language_code=es-ES y es-419). El acento es el que declara Google.
 PREMIUM_VOICE_GROUPS = [
     {
-        "id": "premium-gemini",
-        "label": f"Premium · Gemini (con coste, ≈ {GEMINI_PRICE_PER_MILLION_CHARS:g} $ por millón de caracteres)",
+        "id": "premium-es-ES",
+        "label": f"Premium · España {_PREMIUM_SUFFIX}",
         "flag": "⭐",
         "premium": True,
         "voices": [
-            _gemini_voice("Sulafat", "cálida", "femenina"),
-            _gemini_voice("Kore", "firme", "femenina"),
-            _gemini_voice("Aoede", "desenfadada", "femenina"),
-            _gemini_voice("Leda", "juvenil", "femenina"),
-            _gemini_voice("Achird", "cercana", "masculina"),
-            _gemini_voice("Charon", "informativa", "masculina"),
-            _gemini_voice("Puck", "alegre", "masculina"),
-            _gemini_voice("Algenib", "grave", "masculina"),
+            _gemini_voice("es-es-commercial-3", "Lucía", "cálida", "femenina", "España", "🇪🇸", "Castilian Spanish"),
+            _gemini_voice("es-es-tutor-12", "Marta", "serena", "femenina", "España", "🇪🇸", "Castilian Spanish"),
+            _gemini_voice("es-es-assistant-4", "Javier", "cercana", "masculina", "España", "🇪🇸", "Castilian Spanish"),
+            _gemini_voice("es-es-podcaster-7", "Fernando", "de radio", "masculina", "España", "🇪🇸", "Castilian Spanish"),
+        ],
+    },
+    {
+        "id": "premium-es-MX",
+        "label": f"Premium · México {_PREMIUM_SUFFIX}",
+        "flag": "⭐",
+        "premium": True,
+        "voices": [
+            _gemini_voice("es-419-assistant-2", "Ximena", "alegre", "femenina", "México", "🇲🇽", "Mexico Spanish"),
+            _gemini_voice("es-419-podcaster-2", "Valeria", "de radio", "femenina", "México", "🇲🇽", "Mexico Spanish"),
+            _gemini_voice("es-419-podcaster-1", "Emiliano", "de radio", "masculina", "México", "🇲🇽", "Mexico Spanish"),
+            _gemini_voice("es-419-tutor-4", "Rodrigo", "cercana", "masculina", "México", "🇲🇽", "Mexico Spanish"),
+        ],
+    },
+    {
+        "id": "premium-latam",
+        "label": f"Premium · Latinoamérica {_PREMIUM_SUFFIX}",
+        "flag": "⭐",
+        "premium": True,
+        "voices": [
+            _gemini_voice("es-419-assistant-5", "Camila", "clara", "femenina", "Argentina", "🇦🇷", "Argentina Spanish"),
+            _gemini_voice("es-419-tutor-11", "Martín", "cálida", "masculina", "Argentina", "🇦🇷", "Argentina Spanish"),
+            _gemini_voice("es-419-podcaster-13", "Daniela", "de radio", "femenina", "Colombia", "🇨🇴", "Colombia Spanish"),
+            _gemini_voice("es-419-techagent-13", "Andrés", "cercana", "masculina", "Colombia", "🇨🇴", "Colombia Spanish"),
+            _gemini_voice("es-419-podcaster-14", "Mateo", "de noticias", "masculina", "Perú", "🇵🇪", "Peru Spanish"),
+            _gemini_voice("es-419-podcaster-16", "Sofía", "de noticias", "femenina", "Uruguay", "🇺🇾", "Uruguay Spanish"),
+            _gemini_voice("es-419-podcaster-15", "Gabriela", "de radio", "femenina", "Estados Unidos", "🇺🇸", "United States Spanish"),
         ],
     },
 ]
@@ -177,7 +208,12 @@ def _build_label(group, voice):
     varios países o si el país forma parte del formato acordado). Nunca
     contiene el identificador técnico de la voz."""
     if voice.get("provider") == "gemini":
-        return "{flag} {name} · {descriptor} · {gender}".format(**voice)
+        # Same format as the free voices of each region, plus the voice's style.
+        if group["id"] == "premium-latam":
+            return "{flag} {name} · {country} · {descriptor}".format(**voice)
+        if group["id"] == "premium-es-MX":
+            return "{flag} {name} ({country}) · {descriptor}".format(**voice)
+        return "{flag} {name} · {descriptor}".format(**voice)
     if group["id"] == "latam":
         return "{flag} {name} · {country}".format(**voice)
     if group["id"] == "es-MX":
